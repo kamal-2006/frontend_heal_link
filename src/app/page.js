@@ -48,9 +48,9 @@ export default function Home() {
           </button>
         </div>
         
-        <button className="hidden md:block bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-all duration-300 hover:shadow-lg font-medium">
+        <Link href="/login" className="hidden md:block bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-all duration-300 hover:shadow-lg font-medium">
           Get Started
-        </button>
+        </Link>
       </header>
 
       {/* Mobile Menu - Slide Transition */}
@@ -110,12 +110,13 @@ export default function Home() {
             </Link>
           </nav>
           
-          <button 
-            className="mt-8 w-full bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-all duration-500 hover:shadow-lg font-medium"
+          <Link
+            href="/login"
+            className="mt-8 block w-full bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-all duration-500 hover:shadow-lg font-medium text-center"
             style={{opacity: mobileMenuOpen ? '1' : '0', transform: mobileMenuOpen ? 'translateY(0)' : 'translateY(20px)', transitionDelay: '800ms'}}
           >
             Get Started
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -131,9 +132,9 @@ export default function Home() {
                 Book appointments with top doctors, manage your healthcare schedule, and receive timely reminders - all in one place.
               </p>
               <div className="flex gap-4 pt-4">
-                <button className="bg-blue-600 text-white px-8 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium">
+                <Link href="/login" className="bg-blue-600 text-white px-8 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium">
                   Book Now
-                </button>
+                </Link>
                 <button className="border border-blue-600 text-blue-600 px-8 py-3 rounded-full hover:bg-blue-50 transition-colors font-medium">
                   Learn More
                 </button>
@@ -242,7 +243,7 @@ export default function Home() {
                   <p className="text-gray-600 text-sm">Dedicated to children's health with a gentle approach that puts young patients at ease during visits.</p>
                 </div>
               </div>
-              
+            
               {/* Doctor 4 */}
               <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="h-48 bg-blue-200 relative">
