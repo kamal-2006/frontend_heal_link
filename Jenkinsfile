@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     tools {
-        // Use the new Node.js 22 configuration
         nodejs 'NodeJS-22'
     }
 
@@ -15,12 +14,18 @@ pipeline {
 
         stage('2. Test') {
             steps {
-                // Use the nodejs block to ensure commands run in the correct environment
                 nodejs('NodeJS-22') {
-                    echo 'Installing dependencies and running tests...'
                     sh 'npm install'
-                    echo 'Skipping tests for now.'
+                    sh 'npm test'
                 }
+            }
+        }
+
+        stage('3. Build Docker Image') {
+            steps {
+                echo "Building the Docker image..."
+                // This command builds the image and tags it with the project name and build number
+                sh "docker build -t nextjs-app:${env.BUILD_NUMBER} ."
             }
         }
         // ... other stages
