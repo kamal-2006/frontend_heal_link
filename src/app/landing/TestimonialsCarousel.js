@@ -1,0 +1,204 @@
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+
+const TESTIMONIALS = [
+  {
+    id: 1,
+    quote: "Heal Link has completely transformed how I manage my healthcare. Booking appointments is now quick and hassle-free. I love the reminder feature!",
+    name: "John Doe",
+    role: "Happy Patient",
+    initials: "JD",
+    bgColor: "from-blue-50 to-indigo-100",
+    borderColor: "border-blue-100",
+    avatarColor: "from-blue-500 to-blue-600",
+    quoteColor: "text-blue-600"
+  },
+  {
+    id: 2,
+    quote: "As someone with a busy schedule, I appreciate how easy it is to reschedule appointments when needed. The interface is intuitive and user-friendly.",
+    name: "Amanda Smith",
+    role: "Regular User",
+    initials: "AS",
+    bgColor: "from-purple-50 to-pink-100",
+    borderColor: "border-purple-100",
+    avatarColor: "from-purple-500 to-pink-500",
+    quoteColor: "text-purple-600"
+  },
+  {
+    id: 3,
+    quote: "Being able to see doctor profiles and specialties before booking has helped me find the right healthcare professionals for my specific needs.",
+    name: "Robert Johnson",
+    role: "Satisfied Patient",
+    initials: "RJ",
+    bgColor: "from-green-50 to-emerald-100",
+    borderColor: "border-green-100",
+    avatarColor: "from-green-500 to-emerald-500",
+    quoteColor: "text-green-600"
+  },
+  {
+    id: 4,
+    quote: "The reminder system is fantastic! I never miss appointments anymore, and rescheduling with just a tap is a complete game-changer.",
+    name: "Maria Rodriguez",
+    role: "Frequent User",
+    initials: "MR",
+    bgColor: "from-yellow-50 to-orange-100",
+    borderColor: "border-yellow-100",
+    avatarColor: "from-yellow-500 to-orange-500",
+    quoteColor: "text-yellow-600"
+  },
+  {
+    id: 5,
+    quote: "Excellent platform — booking, rescheduling and doctor details are all in one place. Highly recommended for busy professionals.",
+    name: "Oliver Chen",
+    role: "Tech Professional", 
+    initials: "OC",
+    bgColor: "from-indigo-50 to-violet-100",
+    borderColor: "border-indigo-100",
+    avatarColor: "from-indigo-500 to-violet-500",
+    quoteColor: "text-indigo-600"
+  },
+  {
+    id: 6,
+    quote: "Fast, reliable and incredibly easy to use. The customer support team was exceptionally helpful when I had questions.",
+    name: "Sana Patel",
+    role: "Healthcare Advocate",
+    initials: "SP",
+    bgColor: "from-pink-50 to-rose-100",
+    borderColor: "border-pink-100",
+    avatarColor: "from-pink-500 to-rose-500",
+    quoteColor: "text-pink-600"
+  }
+];
+
+function getVisibleCount() {
+  if (typeof window === "undefined") return 3;
+  if (window.innerWidth >= 1024) return 3;
+  if (window.innerWidth >= 768) return 2;
+  return 1;
+}
+
+export default function TestimonialsCarousel() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [visibleCards, setVisibleCards] = useState(getVisibleCount());
+  const autoPlayRef = useRef(null);
+
+  // Update visible cards on window resize
+  useEffect(() => {
+    const handleResize = () => setVisibleCards(getVisibleCount());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const totalSlides = Math.ceil(TESTIMONIALS.length / visibleCards);
+
+  // Auto-play functionality
+  useEffect(() => {
+    autoPlayRef.current = setInterval(() => {
+      setCurrentIndex((prevIndex) => 
+        prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+      );
+    }, 6000); // Move every 4 seconds
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current);
+      }
+    };
+  }, [totalSlides]);
+
+  // Get testimonials for current slide
+  const getCurrentTestimonials = () => {
+    const start = currentIndex * visibleCards;
+    return TESTIMONIALS.slice(start, start + visibleCards);
+  };
+
+  return (
+    <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">What Our Patients Say</h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Read testimonials from our satisfied patients who have experienced the convenience of Heal Link
+          </p>
+        </div>
+        
+        {/* Carousel Container */}
+        <div className="relative overflow-hidden">
+          <div 
+            className="flex transition-transform duration-1000 ease-in-out"
+            style={{
+              transform: `translateX(-${currentIndex * 100}%)`
+            }}
+          >
+            {/* Create slides */}
+            {Array.from({ length: totalSlides }).map((_, slideIndex) => (
+              <div 
+                key={slideIndex}
+                className="w-full flex-shrink-0"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {TESTIMONIALS.slice(slideIndex * visibleCards, (slideIndex * visibleCards) + visibleCards).map((testimonial) => (
+                    <div
+                      key={testimonial.id}
+                      className={`bg-gradient-to-br ${testimonial.bgColor} p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} border`}
+                    >
+                      <div className={`${testimonial.quoteColor} text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
+                        &#8220;
+                      </div>
+                      <div className="pt-8">
+                        <p className="text-gray-800 mb-6 leading-relaxed font-medium">
+                          {testimonial.quote}
+                        </p>
+                        <div className="flex items-center">
+                          <div className={`bg-gradient-to-br ${testimonial.avatarColor} w-12 h-12 rounded-full flex items-center justify-center mr-4 shadow-lg`}>
+                            <span className="text-white font-bold">{testimonial.initials}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                            <p className="text-gray-600">{testimonial.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Indicators */}
+        <div className="flex justify-center mt-8 space-x-2">
+          {Array.from({ length: totalSlides }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (autoPlayRef.current) {
+                  clearInterval(autoPlayRef.current);
+                }
+                setCurrentIndex(index);
+                // Restart auto-play
+                autoPlayRef.current = setInterval(() => {
+                  setCurrentIndex((prevIndex) => 
+                    prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+                  );
+                }, 4000);
+              }}
+              className={`w-3 h-3 rounded-full transition-colors duration-300 ${
+                currentIndex === index ? "bg-blue-600" : "bg-gray-300"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Progress indicator */}
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-500">
+            {currentIndex + 1} of {totalSlides}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
