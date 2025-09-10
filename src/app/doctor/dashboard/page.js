@@ -13,24 +13,62 @@ export default function DoctorDashboard() {
 
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate data fetching
   useEffect(() => {
     const fetchData = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        setStats({
-          appointmentsToday: 8,
-          totalPatients: 124,
-          pendingReviews: 3,
-          upcomingAppointments: [
-            { id: 1, patientName: "Sarah Johnson", time: "10:00 AM", type: "Check-up" },
-            { id: 2, patientName: "Michael Chen", time: "11:30 AM", type: "Follow-up" },
-            { id: 3, patientName: "Emma Davis", time: "2:15 PM", type: "Consultation" },
-            { id: 4, patientName: "Robert Wilson", time: "3:45 PM", type: "Check-up" },
-          ]
-        });
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        // Handle case where token is not available
         setIsLoading(false);
-      }, 1000);
+        // It might be better to redirect to login page
+        // router.push('/login'); 
+        return;
+      }
+
+      try {
+        const [appointmentsRes, patientsRes, feedbackRes] = await Promise.all([
+          fetch('http://localhost:5000/api/v1/appointments', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('http://localhost:5000/api/v1/patients', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('http://localhost:5000/api/v1/feedback', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const appointmentsData = await appointmentsRes.json();
+        const patientsData = await patientsRes.json();
+        const feedbackData = await feedbackRes.json();
+
+        // Assuming the API returns data in a 'data' property
+        const appointments = appointmentsData.data || [];
+        const patients = patientsData.data || [];
+        const feedback = feedbackData.data || [];
+
+        // Basic data processing
+        const appointmentsToday = appointments.filter(a => new Date(a.date).toDateString() === new Date().toDateString()).length;
+        const upcomingAppointments = appointments.slice(0, 4); // Just take the first 4 for display
+
+        setStats({
+          appointmentsToday: appointmentsToday,
+          totalPatients: patients.length,
+          pendingReviews: feedback.length,
+          upcomingAppointments: upcomingAppointments.map(a => ({
+            id: a._id,
+            patientName: `${a.patient.firstName} ${a.patient.lastName}`,
+            time: new Date(a.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: a.status, // Using status as type for now
+          })),
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Handle error state in UI
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchData();

@@ -37,7 +37,7 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -51,13 +51,36 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    // Simulate signup API
-    setTimeout(() => {
-      console.log("Signup Data:", formData);
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Account created successfully!");
+        router.push("/login");
+      } else {
+        alert(data.error || "Something went wrong");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      alert("An error occurred during signup.");
+    } finally {
       setIsLoading(false);
-      alert("Account created successfully!");
-      router.push("/login");
-    }, 1500);
+    }
   };
 
   return (

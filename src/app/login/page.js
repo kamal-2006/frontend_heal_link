@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 
 export default function Login() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,19 +23,39 @@ export default function Login() {
 };
 
 const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  // submit logic
+    e.preventDefault();
+    setIsLoading(true);
 
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-    
+      const data = await res.json();
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login data:", formData);
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        if (data.role === 'doctor') {
+          router.push('/doctor/dashboard');
+        } else if (data.role === 'patient') {
+          router.push('/patient/dashboard');
+        }
+      } else {
+        alert(data.error || "Something went wrong");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("An error occurred during login.");
+    } finally {
       setIsLoading(false);
-      alert("Login functionality would be implemented here!");
-    }, 1500);
+    }
   };
 
   return (
