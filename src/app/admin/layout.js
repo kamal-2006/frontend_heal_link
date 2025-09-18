@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
 
   const isActive = (path) => {
     return pathname === path ? 
@@ -100,15 +99,14 @@ export default function AdminLayout({ children }) {
           
           {/* Sign Out Button */}
           <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
-            <button 
-              onClick={() => router.push('/login')}
+            <Link href="/login"
               className="flex items-center w-full p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
             >
               <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               <span className={`${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sign Out</span>
-            </button>
+            </Link>
           </div>
         </div>
 
