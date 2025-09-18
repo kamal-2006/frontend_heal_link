@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -10,7 +11,9 @@ export default function Login() {
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
  const handleInputChange = (e) => {
   const { name, value, type, checked } = e.target;
@@ -23,18 +26,57 @@ export default function Login() {
 const handleSubmit = async (e) => {
   e.preventDefault();
   setIsLoading(true);
-  // submit logic
+  setError('');
 
+  try {
+    // 1. Login to get the token
+    const loginRes = await fetch('http://localhost:5000/api/v1/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: formData.email, password: formData.password }),
+    });
 
-    
+    const loginData = await loginRes.json();
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login data:", formData);
-      setIsLoading(false);
-      alert("Login functionality would be implemented here!");
-    }, 1500);
-  };
+    if (!loginData.success) {
+      throw new Error(loginData.error || 'Login failed');
+    }
+
+    const { token } = loginData;
+    localStorage.setItem('token', token);
+
+    // 2. Fetch user data with the token
+    const meRes = await fetch('http://localhost:5000/api/v1/auth/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const meData = await meRes.json();
+
+    if (!meData.success) {
+      throw new Error(meData.error || 'Could not fetch user details');
+    }
+
+    // 3. Redirect based on role
+    const { role } = meData.data;
+    if (role === 'doctor') {
+      router.push('/doctor');
+    } else if (role === 'patient') {
+      router.push('/patient');
+    } else {
+      // Fallback for other roles or no role
+      router.push('/');
+    }
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-50 to-blue-500 flex items-center justify-center p-4">
@@ -56,16 +98,8 @@ const handleSubmit = async (e) => {
         <div className="px-8 py-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                  </svg>
-                </div>
+            <div className="relative">
+              <div className="relative border-2 border-gray-300 rounded-lg focus-within:border-blue-500 transition-colors">
                 <input
                   id="email"
                   name="email"
@@ -74,23 +108,21 @@ const handleSubmit = async (e) => {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  placeholder="Enter your email"
+                  className="block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 peer"
+                  placeholder=" "
                 />
+                <label 
+                  htmlFor="email" 
+                  className="absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 origin-left peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-blue-600 peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75 peer-[:not(:placeholder-shown)]:text-blue-600"
+                >
+                  Email Address
+                </label>
               </div>
             </div>
 
             {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
+            <div className="relative">
+              <div className="relative border-2 border-gray-300 rounded-lg focus-within:border-blue-500 transition-colors">
                 <input
                   id="password"
                   name="password"
@@ -99,9 +131,15 @@ const handleSubmit = async (e) => {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12"
-                  placeholder="Enter your password"
+                  className="block w-full px-4 pt-6 pb-2 pr-12 text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 peer"
+                  placeholder=" "
                 />
+                <label 
+                  htmlFor="password" 
+                  className="absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 origin-left peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-blue-600 peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75 peer-[:not(:placeholder-shown)]:text-blue-600"
+                >
+                  Password
+                </label>
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -222,7 +260,7 @@ const handleSubmit = async (e) => {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <span className="text-sm text-gray-600">
-              Don’t have an account?{" "}
+              Don't have an account?{" "}
               <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign up now
               </Link>
@@ -232,5 +270,4 @@ const handleSubmit = async (e) => {
       </div>
     </div>
   );
-
 }
