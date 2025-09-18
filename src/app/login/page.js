@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 
 export default function Login() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -13,7 +14,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
 
  const handleInputChange = (e) => {
   const { name, value, type, checked } = e.target;
@@ -29,51 +29,35 @@ const handleSubmit = async (e) => {
   setError('');
 
   try {
-    // 1. Login to get the token
-    const loginRes = await fetch('http://localhost:5000/api/v1/auth/login', {
-      method: 'POST',
+    const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email: formData.email, password: formData.password }),
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
     });
 
-    const loginData = await loginRes.json();
+    const data = await res.json();
 
-    if (!loginData.success) {
-      throw new Error(loginData.error || 'Login failed');
-    }
-
-    const { token } = loginData;
-    localStorage.setItem('token', token);
-
-    // 2. Fetch user data with the token
-    const meRes = await fetch('http://localhost:5000/api/v1/auth/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    const meData = await meRes.json();
-
-    if (!meData.success) {
-      throw new Error(meData.error || 'Could not fetch user details');
-    }
-
-    // 3. Redirect based on role
-    const { role } = meData.data;
-    localStorage.setItem('role', role);
-    if (role === 'doctor') {
-      router.push('/doctor/dashboard');
-    } else if (role === 'patient') {
-      router.push('/patient/dashboard');
+    if (res.ok) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      if (data.role === 'doctor') {
+        router.push('/doctor/dashboard');
+      } else if (data.role === 'patient') {
+        router.push('/patient/dashboard');
+      } else {
+        router.push('/');
+      }
     } else {
-      // Fallback for other roles or no role
-      router.push('/');
+      setError(data.error || "Something went wrong");
     }
-
-  } catch (err) {
-    setError(err.message);
+  } catch (error) {
+    console.error("Login error:", error);
+    setError("An error occurred during login.");
   } finally {
     setIsLoading(false);
   }
@@ -97,6 +81,11 @@ const handleSubmit = async (e) => {
         </div>
         
         <div className="px-8 py-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email Input */}
             <div className="relative">

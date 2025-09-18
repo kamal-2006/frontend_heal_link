@@ -18,6 +18,7 @@ export default function Signup() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -39,23 +40,24 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
     if (!formData.terms) {
-      alert("You must agree to the Terms of Service and Privacy Policy!");
+      setError("You must agree to the Terms of Service and Privacy Policy!");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/auth/register', {
-        method: 'POST',
+      const res = await fetch("http://localhost:5000/api/v1/auth/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           firstName: formData.firstName,
@@ -69,15 +71,16 @@ export default function Signup() {
 
       const data = await res.json();
 
-      if (!data.success) {
-        throw new Error(data.error || 'Something went wrong');
+      if (res.ok) {
+        setError('');
+        alert("Account created successfully!");
+        router.push("/login");
+      } else {
+        setError(data.error || "Something went wrong");
       }
-
-      alert("Account created successfully!");
-      router.push("/login");
-
     } catch (error) {
-      alert(error.message);
+      console.error("Signup error:", error);
+      setError("An error occurred during signup.");
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +118,11 @@ export default function Signup() {
         </div>
 
         <div className="px-8 py-8 space-y-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
