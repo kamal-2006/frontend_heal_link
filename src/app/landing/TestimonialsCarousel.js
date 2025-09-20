@@ -113,11 +113,11 @@ export default function TestimonialsCarousel() {
   };
 
   return (
-    <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white">
+    <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">What Our Patients Say</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">What Our Patients Say</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Read testimonials from our satisfied patients who have experienced the convenience of Heal Link
           </p>
         </div>
@@ -140,13 +140,13 @@ export default function TestimonialsCarousel() {
                   {TESTIMONIALS.slice(slideIndex * visibleCards, (slideIndex * visibleCards) + visibleCards).map((testimonial) => (
                     <div
                       key={testimonial.id}
-                      className={`bg-gradient-to-br ${testimonial.bgColor} p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} border`}
+                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} dark:border-gray-600 border`}
                     >
-                      <div className={`${testimonial.quoteColor} text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
+                      <div className={`${testimonial.quoteColor} dark:text-gray-400 text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
                         &#8220;
                       </div>
                       <div className="pt-8">
-                        <p className="text-gray-800 mb-6 leading-relaxed font-medium">
+                        <p className="text-gray-800 dark:text-gray-200 mb-6 leading-relaxed font-medium">
                           {testimonial.quote}
                         </p>
                         <div className="flex items-center">
@@ -154,8 +154,8 @@ export default function TestimonialsCarousel() {
                             <span className="text-white font-bold">{testimonial.initials}</span>
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                            <p className="text-gray-600">{testimonial.role}</p>
+                            <h4 className="font-bold text-gray-900 dark:text-white">{testimonial.name}</h4>
+                            <p className="text-gray-600 dark:text-gray-300">{testimonial.role}</p>
                           </div>
                         </div>
                       </div>
@@ -194,7 +194,7 @@ export default function TestimonialsCarousel() {
 
         {/* Progress indicator */}
         <div className="text-center mt-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {currentIndex + 1} of {totalSlides}
           </p>
         </div>
