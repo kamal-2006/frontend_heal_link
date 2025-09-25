@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';
 
 export default function Signup() {
   const router = useRouter();
@@ -14,45 +14,38 @@ export default function Signup() {
     role: "patient",
     password: "",
     confirmPassword: "",
-    terms: false,
+    terms: false
   });
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Disable scrolling on mount and enable on unmount
-  // useEffect(() => {
-  //   document.body.style.overflow = 'hidden';
-  //   return () => {
-  //     document.body.style.overflow = 'auto';
-  //   };
-  // }, []);
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : value
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
+    
+    // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match!");
+      setError("Passwords don't match");
       return;
     }
+    
     if (!formData.terms) {
-      setError("You must agree to the Terms of Service and Privacy Policy!");
+      setError("Please accept the terms and conditions");
       return;
     }
-
+    
     setIsLoading(true);
-
+    setError('');
+    
     try {
       const res = await fetch("http://localhost:5000/api/v1/auth/register", {
         method: "POST",
@@ -65,22 +58,20 @@ export default function Signup() {
           email: formData.email,
           phone: formData.phone,
           role: formData.role,
-          password: formData.password,
+          password: formData.password
         }),
       });
-
+      
       const data = await res.json();
-
+      
       if (res.ok) {
-        setError('');
-        alert("Account created successfully!");
-        router.push("/login");
+        router.push('/login');
       } else {
-        setError(data.error || "Something went wrong");
+        setError(data.error || "Registration failed");
       }
     } catch (error) {
-      console.error("Signup error:", error);
-      setError("An error occurred during signup.");
+      console.error("Registration error:", error);
+      setError("An error occurred during registration.");
     } finally {
       setIsLoading(false);
     }

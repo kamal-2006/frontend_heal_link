@@ -1,22 +1,24 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata = {
-  title: "Heal Link", 
+  title: "Heal Link",
   description: "Your Healthcare Companion App",
-    icons: {
-    icon: "/image.png",  
+  icons: {
+    icon: "/image.png",
   },
 };
 
@@ -25,14 +27,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${jakartaSans.variable} antialiased bg-gray-50 font-sans`}
       >
         {clientId ? (
           <GoogleOAuthProvider clientId={clientId}>
             {children}
           </GoogleOAuthProvider>
         ) : (
-          <>{children}</>
+          children
         )}
       </body>
     </html>

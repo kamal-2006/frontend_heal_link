@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import useUser from "../../../hooks/useUser";
@@ -11,6 +11,28 @@ export default function DoctorDashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, setUser } = useUser();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      message: "New appointment booked",
+      time: "10 minutes ago",
+      read: false,
+    },
+    {
+      id: 2,
+      message: "Patient feedback received",
+      time: "2 hours ago",
+      read: false,
+    },
+    {
+      id: 3,
+      message: "Appointment rescheduled",
+      time: "Yesterday",
+      read: true,
+    },
+  ]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -24,17 +46,23 @@ export default function DoctorDashboardLayout({ children }) {
       : "text-gray-600 hover:bg-blue-50 hover:text-blue-600";
   };
 
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      {/* Top Navigation - Fixed */}
+      <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <svg
                   className="h-6 w-6"
@@ -54,23 +82,241 @@ export default function DoctorDashboardLayout({ children }) {
 
               {/* Logo */}
               <Link href="/" className="flex-shrink-0 flex items-center">
-                <h1 className="text-2xl font-bold text-blue-600">Heal Link</h1>
+                <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-md flex items-center justify-center mr-2">
+                  <svg
+                    className="h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  Heal Link
+                </h1>
               </Link>
             </div>
 
-            {/* User Profile Dropdown */}
-            <div className="flex items-center">
-              <div className="ml-3 relative">
-                {!loading && user && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700">
-                      Dr. {toTitleCase(user?.firstName)} {toTitleCase(user?.lastName)}
+            {/* User Profile and Notification */}
+            <div className="flex items-center space-x-4">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                  className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  aria-label="Notifications"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  {unreadNotifications > 0 && (
+                    <span className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow-sm transform scale-100 transition-transform animate-pulse">
+                      {unreadNotifications}
                     </span>
-                    <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {toTitleCase(user?.firstName?.[0])}
-                        {toTitleCase(user?.lastName?.[0])}
-                      </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {isNotificationOpen && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 transform transition-all duration-200">
+                    <div className="p-4">
+                      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Notifications
+                        </h3>
+                        {unreadNotifications > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        {notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-3 mb-2 rounded-md ${
+                                notification.read ? "bg-white" : "bg-blue-50"
+                              } hover:bg-gray-50 transition-colors duration-150`}
+                            >
+                              <p className="text-sm font-medium text-gray-900 mb-1">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-500 flex items-center">
+                                <svg
+                                  className="h-3 w-3 mr-1"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                {notification.time}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <svg
+                              className="mx-auto h-10 w-10 text-gray-300"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                            <p className="mt-2 text-sm text-gray-500">
+                              No notifications
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {notifications.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+                          <a
+                            href="#"
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            View all notifications
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Profile Dropdown */}
+              <div className="ml-3 relative">
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-3 px-2 py-1 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                >
+                  {!loading && user && (
+                    <>
+                      <div className="text-right mr-2">
+                        <span className="block text-sm font-medium text-gray-800">
+                          Dr. {toTitleCase(user?.firstName)}{" "}
+                          {toTitleCase(user?.lastName)}
+                        </span>
+                        <span className="block text-xs text-gray-500">
+                          {user?.specialty ||
+                            user?.specialization ||
+                            "General Practitioner"}
+                        </span>
+                      </div>
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-md">
+                        <span className="text-sm font-medium">
+                          {toTitleCase(user?.firstName?.[0])}
+                          {toTitleCase(user?.lastName?.[0])}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </button>
+
+                {isProfileOpen && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-30 overflow-hidden transform transition-all duration-200">
+                    {!loading && user && (
+                      <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 rounded-full bg-white text-blue-600 flex items-center justify-center text-lg font-semibold">
+                            {toTitleCase(user?.firstName?.[0])}
+                            {toTitleCase(user?.lastName?.[0])}
+                          </div>
+                          <div>
+                            <p className="font-medium">
+                              Dr. {toTitleCase(user?.firstName)}{" "}
+                              {toTitleCase(user?.lastName)}
+                            </p>
+                            <p className="text-xs text-blue-100">
+                              {user?.email || "doctor@heallink.com"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className="py-1"
+                      role="menu"
+                      aria-orientation="vertical"
+                      aria-labelledby="user-menu"
+                    >
+                      <Link
+                        href="/doctor/dashboard/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="group flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150"
+                        role="menuitem"
+                      >
+                        <svg
+                          className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        View Profile
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsProfileOpen(false);
+                        }}
+                        className="group flex w-full items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-150"
+                        role="menuitem"
+                      >
+                        <svg
+                          className="mr-3 h-5 w-5 text-red-400 group-hover:text-red-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                          />
+                        </svg>
+                        Sign Out
+                      </button>
                     </div>
                   </div>
                 )}
@@ -80,18 +326,45 @@ export default function DoctorDashboardLayout({ children }) {
         </div>
       </nav>
 
-      <div className="flex">
+      <div className="flex pt-16">
+        {" "}
+        {/* Added padding top to account for fixed navbar */}
         {/* Sidebar */}
         <div
           className={`${
             isSidebarOpen ? "block" : "hidden"
-          } md:block md:w-64 bg-white shadow-md h-[calc(100vh-4rem)] fixed overflow-y-auto`}
+          } md:block md:w-64 bg-white shadow-lg h-[calc(100vh-4rem)] fixed overflow-y-auto z-10 transition-all duration-300`}
         >
           <div className="p-4">
-            <nav className="space-y-1">
+            <div className="mb-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                  Main Menu
+                </h2>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="md:hidden text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <nav className="space-y-2">
               <Link
                 href="/doctor/dashboard"
-                className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md ${isActive(
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
                   ""
                 )}`}
               >
@@ -107,29 +380,8 @@ export default function DoctorDashboardLayout({ children }) {
               </Link>
 
               <Link
-                href="/doctor/dashboard/profile"
-                className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md ${isActive(
-                  "/profile"
-                )}`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mr-3 h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Profile
-              </Link>
-
-              <Link
                 href="/doctor/dashboard/appointments"
-                className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md ${isActive(
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
                   "/appointments"
                 )}`}
               >
@@ -150,7 +402,7 @@ export default function DoctorDashboardLayout({ children }) {
 
               <Link
                 href="/doctor/dashboard/feedback"
-                className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md ${isActive(
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
                   "/feedback"
                 )}`}
               >
@@ -171,7 +423,7 @@ export default function DoctorDashboardLayout({ children }) {
 
               <Link
                 href="/doctor/dashboard/patients"
-                className={`group flex items-center px-3 py-3 text-sm font-medium rounded-md ${isActive(
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
                   "/patients"
                 )}`}
               >
@@ -185,36 +437,68 @@ export default function DoctorDashboardLayout({ children }) {
                 </svg>
                 Patients
               </Link>
-
-              <div className="pt-4 mt-4 border-t border-gray-200">
-                <button
-                  onClick={handleLogout}
-                  className="group flex items-center px-3 py-3 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 w-full"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="mr-3 h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Sign Out
-                </button>
-              </div>
             </nav>
+
+            <div className="mt-10 pt-6 border-t border-gray-100">
+              <div className="rounded-lg bg-blue-50 p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 p-2 rounded-md bg-blue-600">
+                    <svg
+                      className="h-6 w-6 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Need Help?
+                    </h3>
+                    <p className="mt-1 text-xs text-blue-700">
+                      Check our documentation or contact support.
+                    </p>
+                    <Link
+                      href="/support"
+                      className="mt-2 block text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      Get Support →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
         {/* Main Content */}
-        <main className={`flex-1 ${isSidebarOpen ? "md:ml-64" : ""} p-6`}>
-          {children}
+        <main
+          className={`flex-1 ${
+            isSidebarOpen ? "md:ml-64" : ""
+          } p-6 transition-all duration-300`}
+        >
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            {children}
+          </div>
         </main>
       </div>
+
+      {/* Close modals when clicking outside */}
+      {(isNotificationOpen || isProfileOpen) && (
+        <div
+          className="fixed inset-0 z-10"
+          onClick={() => {
+            setIsNotificationOpen(false);
+            setIsProfileOpen(false);
+          }}
+        ></div>
+      )}
     </div>
   );
 }
