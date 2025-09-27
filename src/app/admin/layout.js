@@ -1,12 +1,34 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function AdminLayout({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const profileRef = useRef(null);
+  const notificationsRef = useRef(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Notifications state similar to doctor dashboard
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'New doctor added', time: '10 minutes ago', read: false },
+    { id: 2, message: 'System update scheduled', time: '2 hours ago', read: false },
+    { id: 3, message: 'Appointment rescheduled', time: 'Yesterday', read: true },
+  ]);
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const markAllAsRead = () => setNotifications(notifications.map((n) => ({ ...n, read: true })));
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+    } catch {}
+    router.push('/login');
+  };
 
   const isActive = (path) => {
     return pathname === path
@@ -42,6 +64,38 @@ export default function AdminLayout({ children }) {
     },
   ];
 
+  // Close dropdowns on outside click and Escape
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
+    }
+    
+    function handleEsc(event) {
+      if (event.key === 'Escape') {
+        setIsProfileOpen(false);
+        setIsNotificationsOpen(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsProfileOpen(false);
+    setIsNotificationsOpen(false);
+  }, [pathname]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
@@ -75,18 +129,107 @@ export default function AdminLayout({ children }) {
                 <h1 className="text-2xl font-bold text-blue-600">Heal Link</h1>
               </Link>
             </div>
-
+            
             {/* User Profile */}
             <div className="flex items-center">
-              <div className="ml-3 relative">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700">
-                    Admin
-                  </span>
+              {/* Notifications (right side) */}
+              <div className="mr-3 relative" ref={notificationsRef}>
+                <button
+                  onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                  className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Notifications"
+                >
+                  <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">{unreadNotifications}</span>
+                  )}
+                </button>
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+                      {unreadNotifications > 0 && (
+                        <button onClick={markAllAsRead} className="text-xs font-medium text-blue-600 hover:text-blue-800">Mark all as read</button>
+                      )}
+                    </div>
+                    <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
+                      <li className="px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start gap-3">
+                          <span className="h-2 w-2 rounded-full bg-red-500 mt-2"></span>
+                          <div>
+                            <p className="text-sm text-gray-800">Doctor slot swap requested by Dr. Jane</p>
+                            <p className="text-xs text-gray-500">5 minutes ago</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li className="px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start gap-3">
+                          <span className="h-2 w-2 rounded-full bg-blue-500 mt-2"></span>
+                          <div>
+                            <p className="text-sm text-gray-800">System update scheduled tonight</p>
+                            <p className="text-xs text-gray-500">1 hour ago</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li className="px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start gap-3">
+                          <span className="h-2 w-2 rounded-full bg-amber-500 mt-2"></span>
+                          <div>
+                            <p className="text-sm text-gray-800">Appointment change: Patient John to 3:00 PM</p>
+                            <p className="text-xs text-gray-500">Yesterday</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li className="px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start gap-3">
+                          <span className="h-2 w-2 rounded-full bg-gray-400 mt-2"></span>
+                          <div>
+                            <p className="text-sm text-gray-800">System maintenance window completed</p>
+                            <p className="text-xs text-gray-500">2 days ago</p>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div className="ml-3 relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen((prev) => !prev)}
+                  className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-gray-100"
+                  aria-haspopup="true"
+                  aria-expanded={isProfileOpen}
+                >
+                  <span className="text-sm font-medium text-gray-700">Admin</span>
                   <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
                     <span className="text-sm font-medium">A</span>
                   </div>
-                </div>
+                </button>
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-800">Admin</p>
+                      <p className="text-xs text-gray-500">admin@heallink.local</p>
+                    </div>
+                    <ul className="py-1">
+                      <li>
+                        <Link href="/admin/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Admin Profile
+                        </Link>
+                      </li>
+                      <li className="border-t border-gray-100">
+                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 flex items-center gap-2">
+                          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 11-6 0v-1m6-8V7a3 3 0 10-6 0v1" />
+                          </svg>
+                          Sign Out
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -94,8 +237,6 @@ export default function AdminLayout({ children }) {
       </nav>
 
       <div className="flex pt-16">
-        {" "}
-        {/* Add padding top to account for fixed navbar */}
         {/* Sidebar */}
         <div
           className={`fixed left-0 h-[calc(100vh-4rem)] bg-white shadow-md transition-all duration-300 ${
@@ -135,34 +276,10 @@ export default function AdminLayout({ children }) {
               </li>
             ))}
           </ul>
-
-          {/* Sign Out Button */}
-          <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
-            <Link
-              href="/login"
-              className="flex items-center w-full p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <svg
-                className="w-5 h-5 mr-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-              <span
-                className={`${isCollapsed ? "opacity-0 w-0" : "opacity-100"}`}
-              >
-                Sign Out
-              </span>
-            </Link>
-          </div>
+          
+          {/* Sign Out removed per requirements; access via Admin Profile page */}
         </div>
+        
         {/* Main Content */}
         <main
           className={`transition-all duration-300 ${
