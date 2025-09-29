@@ -122,13 +122,13 @@ export default function PatientDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* New Appointment Card */}
         <Link href="/patient/dashboard/book" className="block group">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md p-6 text-white hover:shadow-xl transition-all duration-300 transform group-hover:scale-105 h-full min-h-[140px] flex flex-col justify-between">
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2 leading-tight">Book Appointment</h3>
-                <p className="text-blue-100 text-sm leading-relaxed">Schedule your next visit</p>
+                <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Book Appointment</h3>
+                <p className="text-blue-700 text-sm leading-relaxed">Schedule your next visit</p>
               </div>
-              <div className="bg-blue-400 bg-opacity-30 p-3 rounded-full ml-3 flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
@@ -136,8 +136,8 @@ export default function PatientDashboard() {
             </div>
             <div className="mt-auto">
               <div className="flex items-center justify-between">
-                <span className="text-blue-100 text-sm font-medium">Click to book</span>
-                <svg className="w-4 h-4 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-blue-700 text-sm font-semibold">Click to book</span>
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -147,13 +147,13 @@ export default function PatientDashboard() {
 
         {/* Reports Card */}
         <Link href="/patient/reports" className="block group">
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-6 text-white hover:shadow-xl transition-all duration-300 transform group-hover:scale-105 h-full min-h-[140px] flex flex-col justify-between">
+          <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2 leading-tight">Medical Reports</h3>
-                <p className="text-purple-100 text-sm leading-relaxed">Lab results & documents</p>
+                <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medical Reports</h3>
+                <p className="text-purple-700 text-sm leading-relaxed">Lab results & documents</p>
               </div>
-              <div className="bg-purple-400 bg-opacity-30 p-3 rounded-full ml-3 flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -162,10 +162,10 @@ export default function PatientDashboard() {
             <div className="mt-auto">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-2xl font-bold">{unreadReportsCount}</span>
-                  <span className="text-purple-100 text-sm ml-2">new reports</span>
+                  <span className="text-2xl font-extrabold text-gray-900">{unreadReportsCount}</span>
+                  <span className="text-purple-700 text-sm ml-2 font-semibold">new reports</span>
                 </div>
-                <svg className="w-4 h-4 text-purple-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -175,13 +175,13 @@ export default function PatientDashboard() {
 
         {/* Current Medications Card */}
         <Link href="/patient/medications" className="block group">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-6 text-white hover:shadow-xl transition-all duration-300 transform group-hover:scale-105 h-full min-h-[140px] flex flex-col justify-between">
+          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2 leading-tight">Medications</h3>
-                <p className="text-green-100 text-sm leading-relaxed">Active prescriptions</p>
+                <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medications</h3>
+                <p className="text-green-700 text-sm leading-relaxed">Active prescriptions</p>
               </div>
-              <div className="bg-green-400 bg-opacity-30 p-3 rounded-full ml-3 flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-white text-green-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
@@ -190,10 +190,10 @@ export default function PatientDashboard() {
             <div className="mt-auto">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-2xl font-bold">{activeMedications.length}</span>
-                  <span className="text-green-100 text-sm ml-2">active meds</span>
+                  <span className="text-2xl font-extrabold text-gray-900">{activeMedications.length}</span>
+                  <span className="text-green-700 text-sm ml-2 font-semibold">active meds</span>
                 </div>
-                <svg className="w-4 h-4 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -203,13 +203,13 @@ export default function PatientDashboard() {
 
         {/* Upcoming Appointments Card */}
         <Link href="/patient/appointments" className="block group">
-          <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-md p-6 text-white hover:shadow-xl transition-all duration-300 transform group-hover:scale-105 h-full min-h-[140px] flex flex-col justify-between">
+          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2 leading-tight">Appointments</h3>
-                <p className="text-amber-100 text-sm leading-relaxed">Scheduled visits</p>
+                <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Appointments</h3>
+                <p className="text-amber-700 text-sm leading-relaxed">Scheduled visits</p>
               </div>
-              <div className="bg-amber-400 bg-opacity-30 p-3 rounded-full ml-3 flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -218,10 +218,10 @@ export default function PatientDashboard() {
             <div className="mt-auto">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-2xl font-bold">{upcomingAppointments.length}</span>
-                  <span className="text-amber-100 text-sm ml-2">upcoming</span>
+                  <span className="text-2xl font-extrabold text-gray-900">{upcomingAppointments.length}</span>
+                  <span className="text-amber-700 text-sm ml-2 font-semibold">upcoming</span>
                 </div>
-                <svg className="w-4 h-4 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>

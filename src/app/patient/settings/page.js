@@ -296,7 +296,7 @@ export default function SettingsPage() {
                         name="firstName"
                         value={profileForm.firstName}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                         name="lastName"
                         value={profileForm.lastName}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
                         name="email"
                         value={profileForm.email}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div>
@@ -335,7 +335,7 @@ export default function SettingsPage() {
                         name="phone"
                         value={profileForm.phone}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -348,7 +348,7 @@ export default function SettingsPage() {
                         name="address"
                         value={profileForm.address}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div>
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                         name="city"
                         value={profileForm.city}
                         onChange={handleProfileChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -375,7 +375,7 @@ export default function SettingsPage() {
                           name="state"
                           value={profileForm.state}
                           onChange={handleProfileChange}
-                          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                         />
                       </div>
                       <div>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                           name="zipCode"
                           value={profileForm.zipCode}
                           onChange={handleProfileChange}
-                          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                         />
                       </div>
                     </div>
@@ -630,7 +630,7 @@ export default function SettingsPage() {
                         name="currentPassword"
                         value={passwordForm.currentPassword}
                         onChange={handlePasswordChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                         required
                       />
                     </div>
@@ -644,7 +644,7 @@ export default function SettingsPage() {
                         name="newPassword"
                         value={passwordForm.newPassword}
                         onChange={handlePasswordChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                         required
                         minLength="8"
                       />
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                         name="confirmPassword"
                         value={passwordForm.confirmPassword}
                         onChange={handlePasswordChange}
-                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                         required
                       />
                     </div>
