@@ -101,7 +101,7 @@ export default function PatientBookPage() {
                 value={formData.reason}
                 onChange={handleChange}
                 placeholder="Please describe your symptoms or the reason for this appointment..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                 required
               />
             </div>
@@ -115,7 +115,7 @@ export default function PatientBookPage() {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Select category</option>
                 <option value="general">General Consultation</option>
@@ -136,7 +136,7 @@ export default function PatientBookPage() {
                 value={formData.preferredDate}
                 onChange={handleChange}
                 min={getTomorrowDate()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                 required
               />
             </div>
@@ -150,7 +150,7 @@ export default function PatientBookPage() {
                 name="preferredTime"
                 value={formData.preferredTime}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                 required
               >
                 <option value="">Select time</option>
@@ -180,7 +180,7 @@ export default function PatientBookPage() {
                 value={formData.notes}
                 onChange={handleChange}
                 placeholder="Any additional information you'd like to share..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,6 +21,10 @@ export default function PatientLayout({ children }) {
     email: '',
     role: 'patient'
   });
+
+  // Refs for click-outside functionality
+  const notificationRef = useRef(null);
+  const profileRef = useRef(null);
 
   // Sample notifications - in a real app, these would come from an API
   const notifications = [
@@ -75,6 +79,23 @@ export default function PatientLayout({ children }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -102,7 +123,7 @@ export default function PatientLayout({ children }) {
     { name: 'Feedback', path: '/patient/feedback', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
     { name: 'Reports', path: '/patient/reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
     { name: 'Medications', path: '/patient/medications', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-    { name: 'Settings & Profile', path: '/patient/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+    { name: 'Settings', path: '/patient/settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
   ];
 
   return (
@@ -158,18 +179,8 @@ export default function PatientLayout({ children }) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Patient Name Display - Only on larger screens */}
-              <div className="hidden md:flex items-center mr-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                  <span className="text-sm font-medium text-blue-700">
-                    {toTitleCase(user.firstName)} {toTitleCase(user.lastName)}
-                  </span>
-                </div>
-              </div>
-
               {/* Notification Bell */}
-              <div className="relative">
+              <div className="relative" ref={notificationRef}>
                 <button
                   onClick={toggleNotifications}
                   className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
@@ -190,14 +201,14 @@ export default function PatientLayout({ children }) {
                     />
                   </svg>
                   {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow-sm transform scale-100 transition-transform animate-pulse">
+                    <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow-sm">
                       {notifications.filter(n => !n.read).length}
                     </span>
                   )}
                 </button>
 
                 {notificationsOpen && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 transform transition-all duration-200">
+                  <div className="absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white border border-gray-200 z-50">
                     <div className="p-4">
                       <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-2">
                         <h3 className="text-sm font-semibold text-gray-900">
@@ -278,12 +289,19 @@ export default function PatientLayout({ children }) {
               </div>
 
               {/* Profile dropdown */}
-              <div className="relative ml-3">
+              <div className="relative ml-3" ref={profileRef}>
                 <button
                   onClick={toggleProfile}
-                  className="flex items-center max-w-xs text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="flex items-center space-x-2 max-w-xs text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 p-1"
                 >
                   <span className="sr-only">Open user menu</span>
+                  {/* Patient Name - visible on larger screens */}
+                  <div className="hidden sm:block text-right mr-2">
+                    <div className="text-sm font-medium text-gray-700">
+                      {toTitleCase(user.firstName)} {toTitleCase(user.lastName)}
+                    </div>
+                    <div className="text-xs text-gray-500">Patient</div>
+                  </div>
                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                     {loading ? (
                       <div className="h-5 w-5 rounded-full bg-gray-200 animate-pulse"></div>
@@ -307,7 +325,7 @@ export default function PatientLayout({ children }) {
                 </button>
 
                 {profileOpen && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-72 rounded-xl shadow-2xl bg-white ring-1 ring-gray-200 focus:outline-none z-40 border border-gray-100">
+                  <div className="absolute right-0 mt-2 w-72 rounded-lg shadow-lg bg-white border border-gray-200 z-50">
                     {/* User Info Header */}
                     <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                       <div className="flex items-center">
@@ -315,14 +333,10 @@ export default function PatientLayout({ children }) {
                           {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-base font-semibold text-gray-900">
+                          <p className="text-base font-semibold text-gray-800">
                             {toTitleCase(user.firstName)} {toTitleCase(user.lastName)}
                           </p>
-                          <p className="text-sm text-gray-600">{user.email}</p>
-                          <div className="flex items-center mt-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                            <span className="text-xs text-green-600 font-medium">Online</span>
-                          </div>
+                          <p className="text-sm text-gray-500">{user.email}</p>
                         </div>
                       </div>
                     </div>
@@ -331,17 +345,7 @@ export default function PatientLayout({ children }) {
                     <div className="py-2">
                       <Link
                         href="/patient/settings"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Profile & Settings
-                      </Link>
-                      
-                      <Link
-                        href="/patient/settings"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        className="flex items-center px-6 py-3 text-sm text-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                       >
                         <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -351,7 +355,7 @@ export default function PatientLayout({ children }) {
                       
                       <Link
                         href="/patient/appointments"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        className="flex items-center px-6 py-3 text-sm text-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                       >
                         <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
