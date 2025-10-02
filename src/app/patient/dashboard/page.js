@@ -5,50 +5,45 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toTitleCase } from '../../../utils/text';
+import usePatient from '../../../hooks/usePatient';
+import { patientApi } from '../../../utils/api';
 
 export default function PatientDashboard() {
   const router = useRouter();
+  const { patient, loading: patientLoading, error: patientError } = usePatient();
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [patientName, setPatientName] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem('token');
-      if (!token) {
+      const role = localStorage.getItem('role');
+      
+      if (!token || role !== 'patient') {
         router.push('/login');
         return;
       }
 
-      // Get patient name from localStorage
-      const storedFirstName = localStorage.getItem('firstName') || 'Patient';
-      const storedLastName = localStorage.getItem('lastName') || '';
-      setFirstName(storedFirstName);
-      setLastName(storedLastName);
-      setPatientName(`${storedFirstName} ${storedLastName}`);
-
       try {
-        const [appointmentsRes, prescriptionsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/appointments', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('http://localhost:5000/api/v1/prescriptions', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+        // Fetch patient-specific data
+        const [appointmentsRes, prescriptionsRes, dashboardRes] = await Promise.all([
+          patientApi.getAppointments().catch(() => ({ data: [] })),
+          patientApi.getMedications().catch(() => ({ data: [] })),
+          patientApi.getDashboard().catch(() => ({ data: null }))
         ]);
 
-        const appointmentsData = await appointmentsRes.json();
-        const prescriptionsData = await prescriptionsRes.json();
+        setAppointments(appointmentsRes.data || []);
+        setPrescriptions(prescriptionsRes.data || []);
+        setDashboardData(dashboardRes.data);
 
-        if (appointmentsRes.ok) {
-          setAppointments(appointmentsData.data || []);
-        } else {
-          console.error('Failed to fetch appointments');
-        }
+        // Mock reports data for now
+        setReports([
+          { id: 1, title: 'Blood Test Results', date: '2024-01-15', status: 'Available' },
+          { id: 2, title: 'X-Ray Report', date: '2024-01-10', status: 'New' },
+        ]);
 
         if (prescriptionsRes.ok) {
           setPrescriptions(prescriptionsData.data || []);
@@ -96,7 +91,11 @@ export default function PatientDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome, {toTitleCase(firstName)} {toTitleCase(lastName)}!
+            Welcome, {patient?.user ? (
+              `${toTitleCase(patient.user.firstName)} ${toTitleCase(patient.user.lastName)}`
+            ) : (
+              'Patient'
+            )}!
           </h1>
           <p className="text-sm text-gray-500">
             Here is a summary of your healthcare activities.
@@ -229,6 +228,8 @@ export default function PatientDashboard() {
           </div>
         </Link>
       </div>
+
+
 
       {/* Upcoming Appointments Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">

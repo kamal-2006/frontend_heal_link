@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toTitleCase } from '../../utils/text';
+import usePatient from '../../hooks/usePatient';
 
 export default function PatientLayout({ children }) {
   const router = useRouter();
@@ -14,13 +15,8 @@ export default function PatientLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { patient, loading: patientLoading, error: patientError } = usePatient();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    role: 'patient'
-  });
 
   // Refs for click-outside functionality
   const notificationRef = useRef(null);
@@ -36,21 +32,12 @@ export default function PatientLayout({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    const firstName = localStorage.getItem('firstName') || '';
-    const lastName = localStorage.getItem('lastName') || '';
-    const email = localStorage.getItem('email') || '';
 
     if (!token || role !== 'patient') {
       router.push('/login');
       return;
     }
     
-    setUser({
-      firstName,
-      lastName,
-      email,
-      role: 'patient'
-    });
     setLoading(false);
     
     // Check if mobile on initial load
@@ -155,26 +142,16 @@ export default function PatientLayout({ children }) {
               </button>
 
               {/* Logo */}
-              <Link href="/patient/dashboard" className="flex-shrink-0 flex items-center">
-                <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-md flex items-center justify-center mr-2">
-                  <svg
-                    className="h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
+                            {/* Logo */}
+              <Link href="/patient" className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                <span className="text-xl font-bold sm:text-2xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                   Heal Link
-                </h1>
+                </span>
               </Link>
             </div>
 
@@ -298,9 +275,15 @@ export default function PatientLayout({ children }) {
                   {/* Patient Name - visible on larger screens */}
                   <div className="hidden sm:block text-right mr-2">
                     <div className="text-sm font-medium text-gray-700">
-                      {toTitleCase(user.firstName)} {toTitleCase(user.lastName)}
+                      {patient?.user ? (
+                        `${toTitleCase(patient.user.firstName)} ${toTitleCase(patient.user.lastName)}`
+                      ) : (
+                        'Loading...'
+                      )}
                     </div>
-                    <div className="text-xs text-gray-500">Patient</div>
+                    <div className="text-xs text-gray-500">
+                      {patient?.patientId || 'Patient'}
+                    </div>
                   </div>
                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                     {loading ? (
@@ -330,13 +313,26 @@ export default function PatientLayout({ children }) {
                     <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                       <div className="flex items-center">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg mr-4">
-                          {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                          {patient?.user ? (
+                            `${patient.user.firstName.charAt(0)}${patient.user.lastName.charAt(0)}`
+                          ) : (
+                            'P'
+                          )}
                         </div>
                         <div>
-                          <p className="text-base font-semibold text-gray-800">
-                            {toTitleCase(user.firstName)} {toTitleCase(user.lastName)}
-                          </p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                          {patient?.user ? (
+                            <>
+                              <p className="text-base font-semibold text-gray-800">
+                                {toTitleCase(patient.user.firstName)} {toTitleCase(patient.user.lastName)}
+                              </p>
+                              <p className="text-sm text-gray-500">{patient.user.email}</p>
+                              {patient.patientId && (
+                                <p className="text-xs text-blue-600 font-medium">ID: {patient.patientId}</p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-base font-semibold text-gray-800">Loading...</p>
+                          )}
                         </div>
                       </div>
                     </div>
