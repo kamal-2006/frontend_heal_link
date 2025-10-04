@@ -6,7 +6,6 @@ import { doctorApi, appointmentApi } from '../../../../utils/api';
 export default function PatientBookPage() {
   const [formData, setFormData] = useState({
     reason: "",
-    category: "",
     specialization: "",
     preferredDate: "",
     preferredTime: "",
@@ -99,7 +98,6 @@ export default function PatientBookPage() {
       // Reset form and go back to step 1
       setFormData({
         reason: "",
-        category: "",
         specialization: "",
         preferredDate: "",
         preferredTime: "",
@@ -180,25 +178,6 @@ export default function PatientBookPage() {
               </div>
 
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="">Select category</option>
-                  <option value="general">General Consultation</option>
-                  <option value="specialist">Specialist Consultation</option>
-                  <option value="follow-up">Follow-up</option>
-                  <option value="emergency">Emergency</option>
-                </select>
-              </div>
-
-              <div>
                 <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-2">
                   Specialization *
                 </label>
@@ -212,7 +191,7 @@ export default function PatientBookPage() {
                 >
                   <option value="">Select specialization</option>
                   {specializations.map((spec) => (
-                    <option key={spec} value={spec.toLowerCase()}>{spec}</option>
+                    <option key={spec} value={spec}>{spec}</option>
                   ))}
                 </select>
               </div>

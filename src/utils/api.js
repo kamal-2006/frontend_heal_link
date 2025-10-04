@@ -127,4 +127,66 @@ export const appointmentApi = {
   })
 };
 
+// Medication API functions
+export const medicationApi = {
+  // Get all my medications
+  getMyMedications: (query = '') => apiRequest(`/medications/my${query}`),
+  
+  // Get my active medications
+  getMyActiveMedications: () => apiRequest('/medications/my/active'),
+  
+  // Get medication reminders for today
+  getMyMedicationReminders: () => apiRequest('/medications/my/reminders'),
+  
+  // Get single medication
+  getMedication: (id) => apiRequest(`/medications/${id}`),
+  
+  // Update medication reminders
+  updateMedicationReminders: (id, reminderData) => apiRequest(`/medications/${id}/reminders`, {
+    method: 'PUT',
+    body: JSON.stringify(reminderData)
+  }),
+  
+  // Add medication note
+  addMedicationNote: (id, noteData) => apiRequest(`/medications/${id}/notes`, {
+    method: 'PUT',
+    body: JSON.stringify(noteData)
+  }),
+  
+  // Update medication status
+  updateMedicationStatus: (id, statusData) => apiRequest(`/medications/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify(statusData)
+  })
+};
+
+// Feedback API functions
+export const feedbackApi = {
+  // Get all feedback for the current patient
+  getMyFeedback: () => apiRequest('/feedback/me'),
+  
+  // Get all feedback for a specific doctor
+  getDoctorFeedback: (doctorId) => apiRequest(`/feedback/doctor/${doctorId}`),
+  
+  // Submit new feedback
+  submitFeedback: (feedbackData) => apiRequest('/feedback', {
+    method: 'POST',
+    body: JSON.stringify(feedbackData)
+  }),
+  
+  // Update existing feedback
+  updateFeedback: (id, feedbackData) => apiRequest(`/feedback/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(feedbackData)
+  }),
+  
+  // Delete feedback
+  deleteFeedback: (id) => apiRequest(`/feedback/${id}`, {
+    method: 'DELETE'
+  }),
+  
+  // Get appointments that need feedback
+  getAppointmentsNeedingFeedback: () => apiRequest('/appointments/needFeedback')
+};
+
 export default apiRequest;
