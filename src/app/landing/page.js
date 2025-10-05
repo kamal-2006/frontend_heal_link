@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     const sectionIds = ["home", "doctors", "testimonials", "about"];
@@ -26,11 +27,20 @@ export default function Landing() {
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Dark mode effect
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
   
   return (
     <div className="font-sans min-h-screen flex flex-col scroll-smooth">
       {/* Header */}
-      <header className="bg-white shadow-lg py-4 px-6 md:px-12 lg:px-20 flex justify-between items-center sticky top-0 z-100">
+      <header className="bg-white dark:bg-gray-900 shadow-lg dark:shadow-gray-800/50 py-4 px-6 md:px-12 lg:px-20 flex justify-between items-center sticky top-0 z-100 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -53,8 +63,8 @@ export default function Landing() {
               href={item.href}
               className={`relative font-medium transition-colors duration-300 group ${
                 activeSection === item.id
-                  ? "text-blue-700 font-semibold"
-                  : "text-gray-700 hover:text-blue-700"
+                  ? "text-blue-700 dark:text-blue-400 font-semibold"
+                  : "text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400"
               }`}
             >
               {item.label}
@@ -67,10 +77,42 @@ export default function Landing() {
           ))}
         </nav>
         
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300 mr-4"
+          aria-label="Toggle dark mode"
+        >
+          {isDarkMode ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
+
         {/* Mobile Menu Button */}
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="text-blue-700 dark:text-blue-400 focus:outline-none p-2"
+            aria-label="Toggle dark mode"
+          >
+            {isDarkMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
           <button 
-            className="text-blue-700 focus:outline-none" 
+            className="text-blue-700 dark:text-blue-400 focus:outline-none" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,7 +132,7 @@ export default function Landing() {
       ></div>
       
       <div 
-        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-30 md:hidden transform transition-all duration-700 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl z-30 md:hidden transform transition-all duration-700 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 transition-all duration-500" style={{opacity: mobileMenuOpen ? '1' : '0', transitionDelay: '300ms'}}>
           <div className="flex justify-between items-center mb-8">
@@ -103,7 +145,7 @@ export default function Landing() {
               <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">Heal Link</h2>
             </div>
             <button 
-              className="text-gray-600 hover:text-gray-800" 
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200" 
               onClick={() => setMobileMenuOpen(false)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,7 +157,7 @@ export default function Landing() {
           <nav className="flex flex-col space-y-4">
             <Link 
               href="/" 
-              className="text-gray-700 hover:text-blue-700 py-3 border-b border-gray-200 transition-all duration-500 hover:pl-4 hover:font-semibold transform translate-x-0 font-medium"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 py-3 border-b border-gray-200 dark:border-gray-700 transition-all duration-500 hover:pl-4 hover:font-semibold transform translate-x-0 font-medium"
               onClick={() => setMobileMenuOpen(false)}
               style={{opacity: mobileMenuOpen ? '1' : '0', transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(50px)', transitionDelay: '400ms'}}
             >
@@ -123,7 +165,7 @@ export default function Landing() {
             </Link>
             <Link 
               href="#about" 
-              className="text-gray-700 hover:text-blue-700 py-3 border-b border-gray-200 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 py-3 border-b border-gray-200 dark:border-gray-700 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
               onClick={() => setMobileMenuOpen(false)}
               style={{opacity: mobileMenuOpen ? '1' : '0', transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(50px)', transitionDelay: '500ms'}}
             >
@@ -131,7 +173,7 @@ export default function Landing() {
             </Link>
             <Link 
               href="#doctors" 
-              className="text-gray-700 hover:text-blue-700 py-3 border-b border-gray-200 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 py-3 border-b border-gray-200 dark:border-gray-700 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
               onClick={() => setMobileMenuOpen(false)}
               style={{opacity: mobileMenuOpen ? '1' : '0', transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(50px)', transitionDelay: '600ms'}}
             >
@@ -139,7 +181,7 @@ export default function Landing() {
             </Link>
             <Link 
               href="#testimonials" 
-              className="text-gray-700 hover:text-blue-700 py-3 border-b border-gray-200 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 py-3 border-b border-gray-200 dark:border-gray-700 transition-all duration-500 hover:pl-4 hover:font-semibold font-medium"
               onClick={() => setMobileMenuOpen(false)}
               style={{opacity: mobileMenuOpen ? '1' : '0', transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(50px)', transitionDelay: '700ms'}}
             >
@@ -159,23 +201,23 @@ export default function Landing() {
 
       <main>
         {/* Hero Section */}
-        <section id="home" className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-24 px-6 md:px-12 lg:px-20 relative overflow-hidden">
+        <section id="home" className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-24 px-6 md:px-12 lg:px-20 relative overflow-hidden transition-colors duration-300">
           {/* Background decoration */}
-          <div className="absolute top-0 left-0 w-full h-full opacity-5">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-600 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-600 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 left-0 w-full h-full opacity-5 dark:opacity-10">
+            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-600 dark:bg-blue-400 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-600 dark:bg-purple-400 rounded-full blur-3xl"></div>
           </div>
           
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16 relative z-10">
             <div className="md:w-1/2 space-y-8">
-              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
+              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white leading-tight">
                 Smart Healthcare{" "}
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-400 dark:via-purple-400 dark:to-blue-300 bg-clip-text text-transparent">
                   Appointment Booking
                 </span>{" "}
                 Made Simple
               </h2>
-              <p className="text-xl text-gray-700 leading-relaxed">
+              <p className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed">
                 Book appointments with top doctors, manage your healthcare schedule, and receive timely reminders - all in one beautifully designed platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
@@ -185,7 +227,7 @@ export default function Landing() {
                 >
                   Book Now
                 </Link>
-                <button className="border-2 border-blue-600 text-blue-700 px-10 py-4 rounded-full hover:bg-blue-600 hover:text-white transition-all duration-300 font-semibold text-lg transform hover:scale-105">
+                <button className="border-2 border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-400 px-10 py-4 rounded-full hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white transition-all duration-300 font-semibold text-lg transform hover:scale-105">
                   Learn More
                 </button>
               </div>
@@ -205,59 +247,59 @@ export default function Landing() {
         </section>
 
         {/* Features Section */}
-        <section className="py-24 px-6 md:px-12 lg:px-20 bg-white">
+        <section className="py-24 px-6 md:px-12 lg:px-20 bg-white dark:bg-gray-900 transition-colors duration-300">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Key Features</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">Discover what makes Heal Link the perfect choice for managing your healthcare appointments</p>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Key Features</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Discover what makes Heal Link the perfect choice for managing your healthcare appointments</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Feature 1 */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-blue-100">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-blue-100 dark:border-gray-600">
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Easy Appointment Booking</h3>
-                <p className="text-gray-700 leading-relaxed">Book appointments with your preferred doctors in just a few clicks. Choose your convenient time slot and get instant confirmation.</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Easy Appointment Booking</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">Book appointments with your preferred doctors in just a few clicks. Choose your convenient time slot and get instant confirmation.</p>
               </div>
               
               {/* Feature 2 */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-purple-100">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-purple-100 dark:border-gray-600">
                 <div className="bg-gradient-to-br from-purple-500 to-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Flexible Scheduling</h3>
-                <p className="text-gray-700 leading-relaxed">Need to reschedule? Our system allows for easy last-minute appointment changes with minimal disruption to your schedule.</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Flexible Scheduling</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">Need to reschedule? Our system allows for easy last-minute appointment changes with minimal disruption to your schedule.</p>
               </div>
               
               {/* Feature 3 */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-green-100">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-green-100 dark:border-gray-600">
                 <div className="bg-gradient-to-br from-green-500 to-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Patient Feedback</h3>
-                <p className="text-gray-700 leading-relaxed">Share your experience and provide valuable feedback to help improve healthcare services and assist other patients.</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Patient Feedback</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">Share your experience and provide valuable feedback to help improve healthcare services and assist other patients.</p>
               </div>
             </div>
           </div>
         </section>
         
         {/* Doctors Section */}
-        <section id="doctors" className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <section id="doctors" className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 transition-colors duration-300">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Meet Our Doctors</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">Our team of experienced healthcare professionals is here to provide you with the best medical care</p>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Meet Our Doctors</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Our team of experienced healthcare professionals is here to provide you with the best medical care</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {/* Doctor 1 */}
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
                 <div className="h-64 bg-gradient-to-br from-blue-400 to-blue-600 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,14 +308,14 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">Dr. Sarah Johnson</h3>
-                  <p className="text-blue-600 font-semibold mb-3">Cardiologist</p>
-                  <p className="text-gray-600 leading-relaxed">Specializing in heart health with over 10 years of experience in treating cardiovascular conditions.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Dr. Sarah Johnson</h3>
+                  <p className="text-blue-600 dark:text-blue-400 font-semibold mb-3">Cardiologist</p>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">Specializing in heart health with over 10 years of experience in treating cardiovascular conditions.</p>
                 </div>
               </div>
               
               {/* Doctor 2 */}
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
                 <div className="h-64 bg-gradient-to-br from-purple-400 to-purple-600 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -282,14 +324,14 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">Dr. Michael Chen</h3>
-                  <p className="text-purple-600 font-semibold mb-3">Neurologist</p>
-                  <p className="text-gray-600 leading-relaxed">Expert in neurological disorders with a focus on innovative treatment approaches for complex cases.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Dr. Michael Chen</h3>
+                  <p className="text-purple-600 dark:text-purple-400 font-semibold mb-3">Neurologist</p>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">Expert in neurological disorders with a focus on innovative treatment approaches for complex cases.</p>
                 </div>
               </div>
               
               {/* Doctor 3 */}
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
                 <div className="h-64 bg-gradient-to-br from-pink-400 to-pink-600 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -298,14 +340,14 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">Dr. Emily Rodriguez</h3>
-                  <p className="text-pink-600 font-semibold mb-3">Pediatrician</p>
-                  <p className="text-gray-600 leading-relaxed">Dedicated to children's health with a gentle approach that puts young patients at ease during visits.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Dr. Emily Rodriguez</h3>
+                  <p className="text-pink-600 dark:text-pink-400 font-semibold mb-3">Pediatrician</p>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">Dedicated to children's health with a gentle approach that puts young patients at ease during visits.</p>
                 </div>
               </div>
             
               {/* Doctor 4 */}
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700">
                 <div className="h-64 bg-gradient-to-br from-green-400 to-green-600 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,9 +356,9 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">Dr. James Wilson</h3>
-                  <p className="text-green-600 font-semibold mb-3">Orthopedic Surgeon</p>
-                  <p className="text-gray-600 leading-relaxed">Specializing in sports medicine and joint replacement with a focus on minimally invasive procedures.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Dr. James Wilson</h3>
+                  <p className="text-green-600 dark:text-green-400 font-semibold mb-3">Orthopedic Surgeon</p>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">Specializing in sports medicine and joint replacement with a focus on minimally invasive procedures.</p>
                 </div>
               </div>
             </div>
@@ -326,24 +368,24 @@ export default function Landing() {
        <TestimonialsCarousel />
         
         {/* About Us Section */}
-        <section id="about" className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <section id="about" className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 transition-colors duration-300">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col lg:flex-row items-center gap-16">
               <div className="lg:w-1/2">
-                <h2 className="text-4xl font-bold mb-8 text-gray-900">About Heal Link</h2>
-                <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+                <h2 className="text-4xl font-bold mb-8 text-gray-900 dark:text-white">About Heal Link</h2>
+                <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg leading-relaxed">
                   Heal Link was founded with a simple mission: to make healthcare more accessible and efficient for everyone. We believe that managing your health should be as simple as a few clicks.
                 </p>
-                <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+                <p className="text-gray-700 dark:text-gray-300 mb-6 text-lg leading-relaxed">
                   Our platform connects patients with qualified healthcare professionals, streamlining the appointment booking process and eliminating unnecessary wait times and administrative hassles.
                 </p>
-                <p className="text-gray-600 text-lg leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
                   With features designed for both patients and healthcare providers, Heal Link is transforming the healthcare experience one appointment at a time.
                 </p>
               </div>
               <div className="lg:w-1/2 flex justify-center">
-                <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-2xl border border-gray-100">
-                  <h3 className="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Our Benefits</h3>
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700">
+                  <h3 className="text-2xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Our Benefits</h3>
                   <ul className="space-y-6">
                     <li className="flex items-start">
                       <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full p-2 mr-4 mt-1 shadow-lg">
@@ -351,7 +393,7 @@ export default function Landing() {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="text-gray-700 font-medium">Save time with quick online booking</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">Save time with quick online booking</span>
                     </li>
                     <li className="flex items-start">
                       <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-2 mr-4 mt-1 shadow-lg">
@@ -359,7 +401,7 @@ export default function Landing() {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="text-gray-700 font-medium">Access to verified healthcare professionals</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">Access to verified healthcare professionals</span>
                     </li>
                     <li className="flex items-start">
                       <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-full p-2 mr-4 mt-1 shadow-lg">
@@ -367,7 +409,7 @@ export default function Landing() {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="text-gray-700 font-medium">Receive appointment reminders</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">Receive appointment reminders</span>
                     </li>
                     <li className="flex items-start">
                       <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-full p-2 mr-4 mt-1 shadow-lg">
@@ -375,7 +417,7 @@ export default function Landing() {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="text-gray-700 font-medium">Manage your medical history securely</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">Manage your medical history securely</span>
                     </li>
                   </ul>
                 </div>
@@ -385,23 +427,23 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 relative overflow-hidden">
-          <div className="absolute inset-0 bg-black opacity-10"></div>
+        <section className="py-24 px-6 md:px-12 lg:px-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-700 dark:via-purple-700 dark:to-blue-900 relative overflow-hidden transition-colors duration-300">
+          <div className="absolute inset-0 bg-black opacity-10 dark:opacity-20"></div>
           <div className="max-w-4xl mx-auto text-center relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Ready to Transform Your Healthcare Experience?
             </h2>
-            <p className="text-xl text-blue-100 mb-10 leading-relaxed">
+            <p className="text-xl text-blue-100 dark:text-blue-200 mb-10 leading-relaxed">
               Join thousands of patients who have simplified their healthcare management with Heal Link. Start booking smarter today.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Link 
                 href="/login" 
-                className="bg-white text-blue-600 px-12 py-4 rounded-full hover:bg-gray-100 transition-all duration-300 hover:shadow-xl font-bold text-lg transform hover:scale-105"
+                className="bg-white dark:bg-gray-100 text-blue-600 dark:text-blue-700 px-12 py-4 rounded-full hover:bg-gray-100 dark:hover:bg-gray-200 transition-all duration-300 hover:shadow-xl font-bold text-lg transform hover:scale-105"
               >
                 Get Started Now
               </Link>
-              <button className="border-2 border-white text-white px-12 py-4 rounded-full hover:bg-white hover:text-blue-600 transition-all duration-300 font-bold text-lg transform hover:scale-105">
+              <button className="border-2 border-white text-white px-12 py-4 rounded-full hover:bg-white hover:text-blue-600 dark:hover:text-blue-700 transition-all duration-300 font-bold text-lg transform hover:scale-105">
                 Watch Demo
               </button>
             </div>
@@ -410,7 +452,7 @@ export default function Landing() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16 px-6 md:px-12 lg:px-20 mt-auto">
+      <footer className="bg-gray-900 dark:bg-black text-white py-16 px-6 md:px-12 lg:px-20 mt-auto transition-colors duration-300">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -422,15 +464,15 @@ export default function Landing() {
                 </div>
                 <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Heal Link</h3>
               </div>
-              <p className="text-gray-300 leading-relaxed">Smart healthcare appointment booking system that puts patients first and transforms healthcare accessibility.</p>
+              <p className="text-gray-300 dark:text-gray-400 leading-relaxed">Smart healthcare appointment booking system that puts patients first and transforms healthcare accessibility.</p>
             </div>
             <div>
               <h4 className="font-bold mb-6 text-white text-lg">Quick Links</h4>
               <ul className="space-y-3">
-                <li><Link href="/" className="text-gray-300 hover:text-white transition-colors duration-300 hover:underline">Home</Link></li>
-                <li><Link href="#about" className="text-gray-300 hover:text-white transition-colors duration-300 hover:underline">About Us</Link></li>
-                <li><Link href="#doctors" className="text-gray-300 hover:text-white transition-colors duration-300 hover:underline">Doctors</Link></li>
-                <li><Link href="#testimonials" className="text-gray-300 hover:text-white transition-colors duration-300 hover:underline">Testimonials</Link></li>
+                <li><Link href="/" className="text-gray-300 dark:text-gray-400 hover:text-white transition-colors duration-300 hover:underline">Home</Link></li>
+                <li><Link href="#about" className="text-gray-300 dark:text-gray-400 hover:text-white transition-colors duration-300 hover:underline">About Us</Link></li>
+                <li><Link href="#doctors" className="text-gray-300 dark:text-gray-400 hover:text-white transition-colors duration-300 hover:underline">Doctors</Link></li>
+                <li><Link href="#testimonials" className="text-gray-300 dark:text-gray-400 hover:text-white transition-colors duration-300 hover:underline">Testimonials</Link></li>
               </ul>
             </div>
             <div>
@@ -442,7 +484,7 @@ export default function Landing() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <span className="text-gray-300">support@heallink.com</span>
+                  <span className="text-gray-300 dark:text-gray-400">support@heallink.com</span>
                 </li>
                 <li className="flex items-center">
                   <div className="bg-green-600 rounded-full p-2 mr-3">
@@ -450,7 +492,7 @@ export default function Landing() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                   </div>
-                  <span className="text-gray-300">+1 (555) 123-4567</span>
+                  <span className="text-gray-300 dark:text-gray-400">+1 (555) 123-4567</span>
                 </li>
               </ul>
             </div>
@@ -475,8 +517,8 @@ export default function Landing() {
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-700 mt-12 pt-8 text-center">
-            <p className="text-gray-400">&copy; {new Date().getFullYear()} Heal Link. All rights reserved. Made with ❤️ for better healthcare.</p>
+          <div className="border-t border-gray-700 dark:border-gray-800 mt-12 pt-8 text-center">
+            <p className="text-gray-400 dark:text-gray-500">&copy; {new Date().getFullYear()} Heal Link. All rights reserved. Made with ❤️ for better healthcare.</p>
           </div>
         </div>
       </footer>

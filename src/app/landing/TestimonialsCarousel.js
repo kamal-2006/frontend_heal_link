@@ -70,41 +70,53 @@ const TESTIMONIALS = [
   }
 ];
 
-function getVisibleCount() {
-  if (typeof window === "undefined") return 3;
-  if (window.innerWidth >= 1024) return 3;
-  if (window.innerWidth >= 768) return 2;
-  return 1;
-}
-
 export default function TestimonialsCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [visibleCards, setVisibleCards] = useState(getVisibleCount());
+  const [visibleCards, setVisibleCards] = useState(3); // Default to 3 for server/client consistency
+  const [isClient, setIsClient] = useState(false);
   const autoPlayRef = useRef(null);
 
-  // Update visible cards on window resize
+  // Update visible cards on window resize - only on client
   useEffect(() => {
+    setIsClient(true);
+    
+    const getVisibleCount = () => {
+      if (typeof window !== 'undefined') {
+        if (window.innerWidth >= 1024) return 3;
+        if (window.innerWidth >= 768) return 2;
+      }
+      return 1;
+    };
+
+    // Set initial client-side value
+    setVisibleCards(getVisibleCount());
+
     const handleResize = () => setVisibleCards(getVisibleCount());
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
   }, []);
 
+  // Ensure consistent rendering between server and initial client render
   const totalSlides = Math.ceil(TESTIMONIALS.length / visibleCards);
 
-  // Auto-play functionality
+  // Auto-play functionality - only run on client
   useEffect(() => {
+    if (!isClient) return;
+    
     autoPlayRef.current = setInterval(() => {
       setCurrentIndex((prevIndex) => 
         prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
       );
-    }, 6000); // Move every 4 seconds
+    }, 6000); // Move every 6 seconds
 
     return () => {
       if (autoPlayRef.current) {
         clearInterval(autoPlayRef.current);
       }
     };
-  }, [totalSlides]);
+  }, [totalSlides, isClient]);
 
   // Get testimonials for current slide
   const getCurrentTestimonials = () => {
@@ -112,12 +124,35 @@ export default function TestimonialsCarousel() {
     return TESTIMONIALS.slice(start, start + visibleCards);
   };
 
+  // Render loading state on server or during initial client hydration
+  if (!isClient) {
+    return (
+      <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white dark:bg-gray-900 transition-colors duration-300">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">What Our Patients Say</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Read testimonials from our satisfied patients who have experienced the convenience of Heal Link
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {TESTIMONIALS.slice(0, 3).map((testimonial) => (
+              <div key={testimonial.id} className="animate-pulse">
+                <div className="bg-gray-200 dark:bg-gray-700 h-48 rounded-2xl"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white">
+    <section id="testimonials" className="py-24 px-6 md:px-12 lg:px-20 bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">What Our Patients Say</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">What Our Patients Say</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Read testimonials from our satisfied patients who have experienced the convenience of Heal Link
           </p>
         </div>
@@ -140,13 +175,13 @@ export default function TestimonialsCarousel() {
                   {TESTIMONIALS.slice(slideIndex * visibleCards, (slideIndex * visibleCards) + visibleCards).map((testimonial) => (
                     <div
                       key={testimonial.id}
-                      className={`bg-gradient-to-br ${testimonial.bgColor} p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} border`}
+                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} dark:border-gray-600 border`}
                     >
-                      <div className={`${testimonial.quoteColor} text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
+                      <div className={`${testimonial.quoteColor} dark:text-gray-400 text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
                         &#8220;
                       </div>
                       <div className="pt-8">
-                        <p className="text-gray-800 mb-6 leading-relaxed font-medium">
+                        <p className="text-gray-800 dark:text-gray-200 mb-6 leading-relaxed font-medium">
                           {testimonial.quote}
                         </p>
                         <div className="flex items-center">
@@ -154,8 +189,8 @@ export default function TestimonialsCarousel() {
                             <span className="text-white font-bold">{testimonial.initials}</span>
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                            <p className="text-gray-600">{testimonial.role}</p>
+                            <h4 className="font-bold text-gray-900 dark:text-white">{testimonial.name}</h4>
+                            <p className="text-gray-600 dark:text-gray-300">{testimonial.role}</p>
                           </div>
                         </div>
                       </div>
@@ -177,12 +212,14 @@ export default function TestimonialsCarousel() {
                   clearInterval(autoPlayRef.current);
                 }
                 setCurrentIndex(index);
-                // Restart auto-play
-                autoPlayRef.current = setInterval(() => {
-                  setCurrentIndex((prevIndex) => 
-                    prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
-                  );
-                }, 4000);
+                // Restart auto-play only on client
+                if (isClient) {
+                  autoPlayRef.current = setInterval(() => {
+                    setCurrentIndex((prevIndex) => 
+                      prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+                    );
+                  }, 6000);
+                }
               }}
               className={`w-3 h-3 rounded-full transition-colors duration-300 ${
                 currentIndex === index ? "bg-blue-600" : "bg-gray-300"
@@ -194,7 +231,7 @@ export default function TestimonialsCarousel() {
 
         {/* Progress indicator */}
         <div className="text-center mt-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {currentIndex + 1} of {totalSlides}
           </p>
         </div>

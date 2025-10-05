@@ -1,49 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AppointmentManagement() {
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      patientName: 'Alice Johnson',
-      doctorName: 'Dr. John Doe',
-      date: '2024-02-01',
-      time: '09:00 AM',
-      status: 'upcoming',
-      type: 'Regular Checkup'
-    },
-    {
-      id: 2,
-      patientName: 'Bob Wilson',
-      doctorName: 'Dr. Jane Smith',
-      date: '2024-02-02',
-      time: '10:30 AM',
-      status: 'rescheduled',
-      type: 'Follow-up'
-    },
-    {
-      id: 3,
-      patientName: 'Carol Brown',
-      doctorName: 'Dr. John Doe',
-      date: '2024-02-01',
-      time: '02:00 PM',
-      status: 'cancelled',
-      type: 'Consultation'
-    }
-  ]);
-
-  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  // Fetch appointments from database
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/v1/appointments');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+      
+      const result = await response.json();
+      setAppointments(result.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setError('Failed to load appointments. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load appointments on component mount
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const getInitials = (name) => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    const first = parts[0]?.[0] || '';
+    const last = parts[parts.length - 1]?.[0] || '';
+    return (first + last).toUpperCase();
+  };
+
+  const formatDate = (iso) => {
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatDateTime = (isoDate, time) => `${formatDate(isoDate)} • ${time}`;
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case 'upcoming':
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
         return 'bg-green-100 text-green-800';
-      case 'rescheduled':
-        return 'bg-yellow-100 text-yellow-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
+      case 'rescheduled':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -55,137 +75,416 @@ export default function AppointmentManagement() {
   };
 
   const handleStatusChange = (appointmentId, newStatus) => {
-    setAppointments(appointments.map(appointment =>
-      appointment.id === appointmentId
-        ? { ...appointment, status: newStatus }
-        : appointment
-    ));
+    // This will be handled by the update function
+    handleUpdateAppointment(appointmentId, { status: newStatus });
+  };
+
+  // Handle view appointment details
+  const handleViewAppointment = (appointment) => {
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(true);
+  };
+
+  // Handle delete appointment
+  const handleDeleteAppointment = async (appointmentId) => {
+    if (!window.confirm('Are you sure you want to delete this appointment?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/appointments/${appointmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete appointment');
+      }
+
+      // Remove from local state
+      setAppointments(appointments.filter(app => app._id !== appointmentId));
+      setSuccessMessage('Appointment deleted successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Close modal if open
+      setIsDetailsModalOpen(false);
+    } catch (err) {
+      console.error('Error deleting appointment:', err);
+      setError('Failed to delete appointment');
+    }
+  };
+
+  // Handle update appointment
+  const handleUpdateAppointment = async (appointmentId, updateData) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/appointments/${appointmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update appointment');
+      }
+
+      const result = await response.json();
+      
+      // Update local state
+      setAppointments(appointments.map(app => 
+        app._id === appointmentId ? { ...app, ...updateData } : app
+      ));
+      
+      setSuccessMessage('Appointment updated successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Close modal
+      setIsDetailsModalOpen(false);
+      
+      // Refresh appointments to get latest data
+      fetchAppointments();
+    } catch (err) {
+      console.error('Error updating appointment:', err);
+      setError('Failed to update appointment');
+    }
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Appointment Management</h1>
-
-      {/* Filters */}
-      <div className="mb-6 flex space-x-4">
-        <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-          <option value="">All Doctors</option>
-          <option value="dr-john-doe">Dr. John Doe</option>
-          <option value="dr-jane-smith">Dr. Jane Smith</option>
-        </select>
-
-        <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-          <option value="">All Status</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="rescheduled">Rescheduled</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-
-        <input
-          type="date"
-          className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
-
-      {/* Appointments Table */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {appointments.map((appointment) => (
-              <tr key={appointment.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{appointment.patientName}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{appointment.doctorName}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {appointment.date} at {appointment.time}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{appointment.type}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(appointment.status)}`}>
-                    {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex flex-col sm:flex-row justify-end sm:space-x-2 space-y-2 sm:space-y-0">
-                    <button
-                      onClick={() => handleReschedule(appointment)}
-                      className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded-md flex items-center justify-center transition-colors duration-150 w-full sm:w-auto"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Reschedule
-                    </button>
-                    {appointment.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleStatusChange(appointment.id, 'cancelled')}
-                        className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded-md flex items-center justify-center transition-colors duration-150 w-full sm:w-auto"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Reschedule Modal */}
-      {isRescheduleModalOpen && selectedAppointment && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Reschedule Appointment</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">New Date</label>
-                <input
-                  type="date"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">New Time</label>
-                <input
-                  type="time"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRescheduleModalOpen(false);
-                    setSelectedAppointment(null);
-                  }}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  Confirm Reschedule
-                </button>
-              </div>
-            </form>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header & Breadcrumbs */}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <nav className="text-sm text-gray-600 mb-2" aria-label="Breadcrumb">
+              <ol className="list-reset inline-flex">
+                <li>Home</li>
+                <li className="mx-2">›</li>
+                <li>Admin</li>
+                <li className="mx-2">›</li>
+                <li className="text-gray-900 font-medium">Appointments</li>
+              </ol>
+            </nav>
+            <h1 className="text-3xl font-bold text-gray-900">Appointment Management</h1>
+          </div>
+          <div className="text-gray-600">
+            {/* Current Date */}
+            {new Date().toLocaleDateString('en-GB')}
           </div>
         </div>
+
+        {/* Success/Error Messages */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            {successMessage}
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Table only layout — filters removed per refined prompt */}
+
+        {/* Appointments Table Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Appointments List</h2>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Doctor Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Appointment Type
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center">
+                      <div className="flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <span className="ml-2 text-gray-600">Loading appointments...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : appointments.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                      No appointments found
+                    </td>
+                  </tr>
+                ) : (
+                  appointments.map((appointment) => (
+                    <tr key={appointment._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold">
+                            {getInitials(`${appointment.patient?.firstName} ${appointment.patient?.lastName}`)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {appointment.patient?.firstName} {appointment.patient?.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">{appointment.patient?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          Dr. {appointment.doctor?.firstName} {appointment.doctor?.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">{appointment.doctor?.specialty || 'General Medicine'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{formatDateTime(appointment.date)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{appointment.reason}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(appointment.status)}`}>
+                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={() => handleViewAppointment(appointment)}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                          aria-label="View appointment details"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zm11 3a3 3 0 100-6 3 3 0 000 6z" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Appointment Details Modal */}
+      {isDetailsModalOpen && selectedAppointment && (
+        <AppointmentDetailsModal 
+          appointment={selectedAppointment}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onUpdate={handleUpdateAppointment}
+          onDelete={handleDeleteAppointment}
+        />
       )}
+    </div>
+  );
+}
+// Appointment Details Modal Component
+function AppointmentDetailsModal({ appointment, onClose, onUpdate, onDelete }) {
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+
+  useEffect(() => {
+    if (appointment) {
+      // Format date for input (YYYY-MM-DD)
+      const date = new Date(appointment.date);
+      const formattedDate = date.toISOString().split('T')[0];
+      setNewDate(formattedDate);
+      
+      // Format time for input (HH:MM)
+      const formattedTime = date.toTimeString().slice(0, 5);
+      setNewTime(formattedTime);
+    }
+  }, [appointment]);
+
+  const handleUpdate = () => {
+    if (newDate && newTime) {
+      // Combine date and time into ISO string
+      const dateTime = new Date(`${newDate}T${newTime}`);
+      onUpdate(appointment._id, { date: dateTime.toISOString() });
+    }
+  };
+
+  const handleDelete = () => {
+    onDelete(appointment._id);
+  };
+
+  const formatDate = (dateString) => {
+    const d = new Date(dateString);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatTime = (dateString) => {
+    const d = new Date(dateString);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Appointment Details</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Patient Information */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Patient Name</label>
+              <p className="text-sm text-gray-900">
+                {appointment.patient?.firstName} {appointment.patient?.lastName}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Patient Email</label>
+              <p className="text-sm text-gray-900">{appointment.patient?.email || 'N/A'}</p>
+            </div>
+            
+            {/* Doctor Information */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Doctor Name</label>
+              <p className="text-sm text-gray-900">
+                Dr. {appointment.doctor?.firstName} {appointment.doctor?.lastName}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Specialization</label>
+              <p className="text-sm text-gray-900">{appointment.doctor?.specialty || 'General Medicine'}</p>
+            </div>
+            
+            {/* Appointment Details */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Current Date</label>
+              <p className="text-sm text-gray-900">{formatDate(appointment.date)}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Current Time</label>
+              <p className="text-sm text-gray-900">{formatTime(appointment.date)}</p>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <span className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(appointment.status)}`}>
+                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Appointment ID</label>
+              <p className="text-sm text-gray-900">{appointment._id}</p>
+            </div>
+            
+            {/* Update Date/Time Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">New Date</label>
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">New Time</label>
+              <input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          {/* Full-width fields */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Appointment Reason</label>
+            <p className="text-sm text-gray-900">{appointment.reason}</p>
+          </div>
+          
+          {appointment.notes && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Notes</label>
+              <p className="text-sm text-gray-900">{appointment.notes}</p>
+            </div>
+          )}
+          
+          {appointment.patient?.phone && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Patient Phone</label>
+              <p className="text-sm text-gray-900">{appointment.patient.phone}</p>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex justify-between pt-4 border-t border-gray-200">
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Delete Appointment
+            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleUpdate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

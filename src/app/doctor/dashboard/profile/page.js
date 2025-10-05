@@ -1,344 +1,364 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toTitleCase } from "../../../../utils/text";
+import api from "@/utils/api";
 
-export default function DoctorProfile() {
-  const [profile, setProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    specialization: "",
-    experience: "",
-    bio: "",
-    address: "",
-    workingHours: ""
-  });
+export default function DoctorProfilePage() {
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
 
-  // Simulate fetching profile data
   useEffect(() => {
-    const fetchProfile = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        const mockProfile = {
-          firstName: "John",
-          lastName: "Doe",
-          email: "john.doe@heallink.com",
-          phone: "+1 (555) 123-4567",
-          specialization: "Cardiology",
-          experience: "15 years",
-          bio: "Dr. John Doe is a board-certified cardiologist with over 15 years of experience in treating various heart conditions. He specializes in preventive cardiology and heart failure management.",
-          address: "123 Medical Center Blvd, Suite 456, New York, NY 10001",
-          workingHours: "Monday - Friday: 9:00 AM - 5:00 PM",
-          education: [
-            { degree: "MD", institution: "Harvard Medical School", year: "2005" },
-            { degree: "Residency in Internal Medicine", institution: "Mayo Clinic", year: "2008" },
-            { degree: "Fellowship in Cardiology", institution: "Johns Hopkins Hospital", year: "2011" }
-          ],
-          certifications: [
-            { name: "Board Certification in Cardiology", issuer: "American Board of Internal Medicine", year: "2012" },
-            { name: "Advanced Cardiac Life Support (ACLS)", issuer: "American Heart Association", year: "2020" }
-          ]
-        };
-        
-        setProfile(mockProfile);
-        setFormData(mockProfile);
-        setIsLoading(false);
-      }, 1000);
-    };
-
-    fetchProfile();
+    async function fetchDoctorProfile() {
+      setLoading(true);
+      setMessage({ type: "", text: "" });
+      try {
+        // Defensive: handle HTML error responses (e.g., 404/500 pages)
+        let res;
+        if (api.get) {
+          res = await api.get("/doctor/me");
+        } else {
+          res = await api("/doctor/me");
+        }
+        // If response is a string and starts with '<', it's HTML, not JSON
+        if (typeof res === "string" && res.trim().startsWith("<")) {
+          throw new Error(
+            "API returned HTML instead of JSON. Check endpoint and authentication."
+          );
+        }
+        // If using fetch, check for .ok and parse JSON safely
+        if (res && res.ok !== undefined) {
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              "API did not return JSON. Check endpoint and authentication."
+            );
+          }
+          const data = await res.json();
+          if (!data || !data.data) throw new Error("Doctor profile not found.");
+          setDoctor(data.data);
+          setFormData({
+            firstName: data.data.user?.firstName || "",
+            lastName: data.data.user?.lastName || "",
+            email: data.data.user?.email || "",
+            phone: data.data.user?.phone || "",
+            specialization: data.data.specialization || "",
+            experience: data.data.experience || "",
+            qualification: data.data.qualification || "",
+            about: data.data.about || "",
+            consultationFee: data.data.consultationFee || "",
+            hospital: data.data.hospital?.name || "",
+            hospitalAddress: data.data.hospital?.address || "",
+            hospitalPhone: data.data.hospital?.phone || "",
+          });
+        } else if (res && res.data) {
+          // If using a custom API util that returns {data}
+          setDoctor(res.data);
+          setFormData({
+            firstName: res.data.user?.firstName || "",
+            lastName: res.data.user?.lastName || "",
+            email: res.data.user?.email || "",
+            phone: res.data.user?.phone || "",
+            specialization: res.data.specialization || "",
+            experience: res.data.experience || "",
+            qualification: res.data.qualification || "",
+            about: res.data.about || "",
+            consultationFee: res.data.consultationFee || "",
+            hospital: res.data.hospital?.name || "",
+            hospitalAddress: res.data.hospital?.address || "",
+            hospitalPhone: res.data.hospital?.phone || "",
+          });
+        } else {
+          throw new Error("Doctor profile not found.");
+        }
+      } catch (err) {
+        setMessage({
+          type: "error",
+          text: err.message || "Failed to load profile.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDoctorProfile();
   }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate API call to update profile
-    setTimeout(() => {
-      setProfile(formData);
-      setIsLoading(false);
-      setIsEditing(false);
-    }, 1000);
+    setIsSubmitting(true);
+    setMessage({ type: "", text: "" });
+    try {
+      // Only send doctor fields for update (not user fields)
+      const updated = await (api.put
+        ? api.put(`/doctor/me`, {
+            specialization: formData.specialization,
+            experience: formData.experience,
+            qualification: formData.qualification,
+            about: formData.about,
+            consultationFee: formData.consultationFee,
+            hospital: {
+              name: formData.hospital,
+              address: formData.hospitalAddress,
+              phone: formData.hospitalPhone,
+            },
+          })
+        : api("PUT", `/doctor/me`, {
+            specialization: formData.specialization,
+            experience: formData.experience,
+            qualification: formData.qualification,
+            about: formData.about,
+            consultationFee: formData.consultationFee,
+            hospital: {
+              name: formData.hospital,
+              address: formData.hospitalAddress,
+              phone: formData.hospitalPhone,
+            },
+          }));
+      setDoctor({ ...doctor, ...updated.data });
+      setIsEditMode(false);
+      setMessage({ type: "success", text: "Profile updated successfully!" });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err.message || "Failed to update profile.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-200"></div>
+            <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-blue-300 opacity-20"></div>
+          </div>
+          <p className="text-sm font-medium text-blue-600">
+            Loading profile...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!formData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg text-red-600 font-semibold">
+            Unable to load doctor profile.
+          </p>
+          {message.text && <p className="mt-2 text-gray-700">{message.text}</p>}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Doctor Profile</h1>
-        {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
-          >
-            Edit Profile
-          </button>
-        )}
-      </div>
-
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
-                Specialization
-              </label>
-              <input
-                type="text"
-                id="specialization"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
-                Experience
-              </label>
-              <input
-                type="text"
-                id="experience"
-                name="experience"
-                value={formData.experience}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="workingHours" className="block text-sm font-medium text-gray-700 mb-1">
-                Working Hours
-              </label>
-              <input
-                type="text"
-                id="workingHours"
-                name="workingHours"
-                value={formData.workingHours}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-          </div>
-          
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8 flex justify-between items-center">
           <div>
-            <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-              Bio
-            </label>
-            <textarea
-              id="bio"
-              name="bio"
-              rows="4"
-              value={formData.bio}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            ></textarea>
+            <h1 className="text-2xl font-semibold text-gray-800 mb-1">
+              My Profile
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Manage your professional information
+            </p>
           </div>
-          
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => {
-                setFormData(profile);
-                setIsEditing(false);
-              }}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-150"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
-            >
-              Save Changes
-            </button>
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`px-4 py-2 text-sm font-medium rounded ${
+              isEditMode
+                ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+          >
+            {isEditMode ? "Cancel" : "Edit Profile"}
+          </button>
+        </div>
+
+        {message.text && (
+          <div
+            className={`mb-4 p-3 rounded border-l-4 ${
+              message.type === "success"
+                ? "bg-green-50 border-green-500 text-green-800"
+                : "bg-red-50 border-red-500 text-red-800"
+            }`}
+          >
+            <p className="text-sm font-medium">{message.text}</p>
           </div>
-        </form>
-      ) : (
-        <div className="space-y-6">
-          {/* Basic Info Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-start">
-              <div className="h-20 w-20 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold">
-                {profile.firstName[0]}{profile.lastName[0]}
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white p-6 rounded border border-gray-200">
+            <div className="flex items-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-600">
+                {toTitleCase(formData.firstName?.[0])}
+                {toTitleCase(formData.lastName?.[0])}
               </div>
               <div className="ml-6">
-                <h2 className="text-xl font-bold text-gray-900">{profile.firstName} {profile.lastName}</h2>
-                <p className="text-blue-600 font-medium">{profile.specialization}</p>
-                <p className="text-gray-500 mt-1">{profile.experience} of experience</p>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Dr. {toTitleCase(formData.firstName)}{" "}
+                  {toTitleCase(formData.lastName)}
+                </h2>
+                <p className="text-gray-600">{formData.email}</p>
+                <p className="text-gray-500">{formData.phone}</p>
               </div>
             </div>
-            
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Email</h3>
-                <p className="text-gray-900">{profile.email}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specialization
+                </label>
+                <input
+                  type="text"
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., Cardiology"
+                />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Phone</h3>
-                <p className="text-gray-900">{profile.phone}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Experience (years)
+                </label>
+                <input
+                  type="number"
+                  name="experience"
+                  value={formData.experience}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Years of experience"
+                  min="0"
+                  max="50"
+                />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Address</h3>
-                <p className="text-gray-900">{profile.address}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Qualification
+                </label>
+                <input
+                  type="text"
+                  name="qualification"
+                  value={formData.qualification}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., MBBS, MD"
+                />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Working Hours</h3>
-                <p className="text-gray-900">{profile.workingHours}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Consultation Fee
+                </label>
+                <input
+                  type="number"
+                  name="consultationFee"
+                  value={formData.consultationFee}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., 200"
+                  min="0"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  About
+                </label>
+                <textarea
+                  name="about"
+                  value={formData.about}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Tell us about yourself..."
+                />
               </div>
             </div>
           </div>
-          
-          {/* Bio Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">About</h3>
-            <p className="text-gray-700">{profile.bio}</p>
-          </div>
-          
-          {/* Education Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Education</h3>
-            <div className="space-y-4">
-              {profile.education.map((edu, index) => (
-                <div key={index} className="flex">
-                  <div className="mr-4 flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">{edu.degree}</h4>
-                    <p className="text-sm text-gray-500">{edu.institution} • {edu.year}</p>
-                  </div>
-                </div>
-              ))}
+          <div className="bg-white p-6 rounded border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Hospital Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hospital Name
+                </label>
+                <input
+                  type="text"
+                  name="hospital"
+                  value={formData.hospital}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., City General Hospital"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hospital Phone
+                </label>
+                <input
+                  type="text"
+                  name="hospitalPhone"
+                  value={formData.hospitalPhone}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., +1234567890"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hospital Address
+                </label>
+                <input
+                  type="text"
+                  name="hospitalAddress"
+                  value={formData.hospitalAddress}
+                  onChange={handleInputChange}
+                  disabled={!isEditMode}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g., 123 Main St, City, State"
+                />
+              </div>
             </div>
           </div>
-          
-          {/* Certifications Card */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Certifications</h3>
-            <div className="space-y-4">
-              {profile.certifications.map((cert, index) => (
-                <div key={index} className="flex">
-                  <div className="mr-4 flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">{cert.name}</h4>
-                    <p className="text-sm text-gray-500">{cert.issuer} • {cert.year}</p>
-                  </div>
-                </div>
-              ))}
+          {isEditMode && (
+            <div className="mt-6 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-6 py-2 text-sm font-medium text-white rounded ${
+                  isSubmitting
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </button>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </form>
+      </div>
     </div>
   );
 }
