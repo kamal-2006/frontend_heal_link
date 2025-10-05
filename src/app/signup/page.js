@@ -12,7 +12,6 @@ export default function Signup() {
     lastName: "",
     email: "",
     phone: "",
-    role: "patient",
     password: "",
     confirmPassword: "",
     terms: false
@@ -53,7 +52,7 @@ export default function Signup() {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        role: formData.role,
+        role: "patient",
         password: formData.password
       });
       
@@ -97,8 +96,8 @@ export default function Signup() {
             </div>
             <h1 className="text-3xl font-bold text-white">Heal Link</h1>
           </Link>
-          <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
-          <p className="text-blue-100">Join Heal Link to continue</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Patient Registration</h2>
+          <p className="text-blue-100">Create your patient account to get started</p>
         </div>
 
         <div className="px-8 py-8 space-y-6">
@@ -231,43 +230,7 @@ export default function Signup() {
               />
             </div>
 
-            {/* Role */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-8 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white"
-              >
-                <option value="patient">Patient</option>
-                <option value="doctor">Doctor</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg
-                  className="fill-current h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
+
 
             {/* Password */}
             <div className="relative">

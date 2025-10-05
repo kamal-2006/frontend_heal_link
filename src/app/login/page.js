@@ -62,6 +62,8 @@ export default function Login() {
           router.push('/doctor/dashboard');
         } else if (data.role === 'patient') {
           router.push('/patient/dashboard');
+        } else if (data.role === 'nurse') {
+          router.push('/nurse');
         } else {
           router.push('/');
         }
@@ -240,6 +242,8 @@ export default function Login() {
                 {isLoading ? "Signing in..." : "Sign in"}
               </button>
             </div>
+
+
 
             {/* Divider */}
             <div className="mt-6 relative">

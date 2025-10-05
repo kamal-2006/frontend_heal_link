@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import useNurse from '../../hooks/useNurse';
 
 export default function NurseLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -12,17 +13,11 @@ export default function NurseLayout({ children }) {
   const profileDropdownRef = useRef(null);
   const notificationDropdownRef = useRef(null);
   const router = useRouter();
+  
+  // Authentication protection
+  const { nurse, loading, error } = useNurse();
 
-  // Mock nurse data
-  const nurseInfo = {
-    name: "Nurse Sarah Johnson",
-    id: "N-001",
-    department: "General Ward",
-    shift: "Morning Shift (6AM - 2PM)",
-    profileImage: "/nurse-avatar.png"
-  };
-
-  // Mock notifications
+  // Mock notifications - move this hook before conditional returns
   useEffect(() => {
     setNotifications([
       { id: 1, message: "Emergency patient admitted to Room 205", type: "urgent", time: "2 mins ago" },
@@ -32,7 +27,7 @@ export default function NurseLayout({ children }) {
     ]);
   }, []);
 
-  // Click outside handler
+  // Click outside handler - move this hook before conditional returns
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
@@ -46,6 +41,56 @@ export default function NurseLayout({ children }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Redirect if not authenticated or not a nurse
+  useEffect(() => {
+    if (!loading && (!nurse || error)) {
+      router.push('/login');
+    }
+  }, [nurse, loading, error, router]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading nurse dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || !nurse) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error || 'Access denied: Nurse role required'}
+          </div>
+          <button 
+            onClick={() => router.push('/login')}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Use authenticated nurse data
+  const nurseInfo = {
+    name: `${nurse.firstName} ${nurse.lastName}`,
+    id: nurse._id,
+    email: nurse.email,
+    department: "General Ward", // This could be added to user model later
+    shift: "Morning Shift (6AM - 2PM)", // This could be added to user model later
+    profileImage: "/nurse-avatar.png"
+  };
+
+
 
   const handleLogout = () => {
     // Handle logout logic
