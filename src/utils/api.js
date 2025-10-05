@@ -74,7 +74,23 @@ export const authApi = {
   changePassword: (passwordData) => apiRequest('/auth/changepassword', {
     method: 'PUT',
     body: JSON.stringify(passwordData)
-  })
+  }),
+
+  // 2FA functions
+  enable2FA: () => apiRequest('/auth/2fa/enable', {
+    method: 'POST'
+  }),
+
+  disable2FA: () => apiRequest('/auth/2fa/disable', {
+    method: 'POST'
+  }),
+
+  verify2FA: (data) => apiRequest('/auth/2fa/verify', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  get2FAStatus: () => apiRequest('/auth/2fa/status')
 };
 
 // Doctor API functions
