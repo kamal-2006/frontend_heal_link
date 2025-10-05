@@ -116,8 +116,8 @@ export const appointmentApi = {
   }),
   
   // Cancel appointment
-  cancelAppointment: (id) => apiRequest(`/appointments/${id}`, {
-    method: 'DELETE'
+  cancelAppointment: (id) => apiRequest(`/appointments/${id}/cancel`, {
+    method: 'PUT'
   }),
   
   // Update appointment
@@ -187,6 +187,18 @@ export const feedbackApi = {
   
   // Get appointments that need feedback
   getAppointmentsNeedingFeedback: () => apiRequest('/appointments/needFeedback')
+};
+
+// Notification preferences API functions
+export const notificationApi = {
+  // Get notification preferences
+  getNotificationPreferences: () => apiRequest('/patients/me/notifications'),
+  
+  // Update notification preferences
+  updateNotificationPreferences: (preferences) => apiRequest('/patients/me/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(preferences)
+  })
 };
 
 export default apiRequest;
