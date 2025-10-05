@@ -78,17 +78,26 @@ export default function PatientBookPage() {
     setLoading(true);
     
     try {
+      // Debug logging
+      console.log('🔍 DEBUG: Starting appointment booking...');
+      console.log('🔍 DEBUG: Doctor ID:', doctorId);
+      console.log('🔍 DEBUG: Form Data:', formData);
+      console.log('🔍 DEBUG: Token:', localStorage.getItem('token') ? 'EXISTS' : 'MISSING');
+      console.log('🔍 DEBUG: User Role:', localStorage.getItem('role'));
+      
       // API call to book appointment using the proper API function
       const appointmentData = {
         doctor: doctorId,
         date: `${formData.preferredDate}T${formData.preferredTime}:00`,
         reason: formData.reason,
-        notes: formData.notes
+        notes: formData.notes || ''
       };
       
-      console.log('Booking appointment with data:', appointmentData);
+      console.log('🔍 DEBUG: Appointment data being sent:', appointmentData);
+      console.log('🔍 DEBUG: Making API call to:', 'http://localhost:5000/api/v1/appointments/book');
+      
       const response = await appointmentApi.bookAppointment(appointmentData);
-      console.log('Appointment booking response:', response);
+      console.log('🔍 DEBUG: Appointment booking response:', response);
       
       setMessage({ 
         type: "success", 
@@ -106,7 +115,10 @@ export default function PatientBookPage() {
       setStep(1);
       setSelectedDoctor(null);
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to book appointment. Please try again." });
+      console.error('🔍 DEBUG: Booking error:', error);
+      console.error('🔍 DEBUG: Error message:', error.message);
+      console.error('🔍 DEBUG: Error stack:', error.stack);
+      setMessage({ type: "error", text: `Failed to book appointment: ${error.message}` });
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import usePatient from '../../../hooks/usePatient';
-import { authApi } from '../../../utils/api';
+import { authApi, notificationApi } from '../../../utils/api';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -26,6 +26,16 @@ export default function SettingsPage() {
   const [verificationCode, setVerificationCode] = useState('');
   const [twoFALoading, setTwoFALoading] = useState(false);
   const [twoFAStep, setTwoFAStep] = useState('setup'); // 'setup', 'verify', 'disable'
+  
+  // Notification preferences state
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    emailNotifications: true,
+    smsNotifications: false,
+    pushNotifications: true,
+    appointmentReminders: true,
+    testResults: true
+  });
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
   
   // Form state with all patient fields
   const [formData, setFormData] = useState({
@@ -64,7 +74,48 @@ export default function SettingsPage() {
     if (!token) {
       router.push('/login');
     }
+    
+    // Fetch notification preferences
+    fetchNotificationPreferences();
   }, [router]);
+
+  const fetchNotificationPreferences = async () => {
+    try {
+      setIsLoadingNotifications(true);
+      const response = await notificationApi.getNotificationPreferences();
+      setNotificationPreferences(response.data);
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  const handleNotificationToggle = async (preferenceKey) => {
+    try {
+      const updatedPreferences = {
+        ...notificationPreferences,
+        [preferenceKey]: !notificationPreferences[preferenceKey]
+      };
+      
+      // Update local state immediately for better UX
+      setNotificationPreferences(updatedPreferences);
+      
+      // Update in backend
+      await notificationApi.updateNotificationPreferences(updatedPreferences);
+      
+      setSuccessMessage('Notification preferences updated successfully');
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 3000);
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      // Revert local state on error
+      setNotificationPreferences(prev => ({
+        ...prev,
+        [preferenceKey]: !prev[preferenceKey]
+      }));
+    }
+  };
 
   // Update form data when patient data is loaded
   useEffect(() => {
@@ -1023,8 +1074,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-teal-700">Receive appointment reminders and updates via email</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={notificationPreferences.emailNotifications}
+                  onChange={() => handleNotificationToggle('emailNotifications')}
+                  disabled={isLoadingNotifications}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 disabled:opacity-50"></div>
               </label>
             </div>
             <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors">
@@ -1038,8 +1095,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-teal-700">Receive urgent notifications via text message</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={notificationPreferences.smsNotifications}
+                  onChange={() => handleNotificationToggle('smsNotifications')}
+                  disabled={isLoadingNotifications}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 disabled:opacity-50"></div>
               </label>
             </div>
             <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors">
@@ -1053,8 +1116,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-teal-700">Receive real-time notifications on your device</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={notificationPreferences.pushNotifications}
+                  onChange={() => handleNotificationToggle('pushNotifications')}
+                  disabled={isLoadingNotifications}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 disabled:opacity-50"></div>
               </label>
             </div>
             <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors">
@@ -1068,8 +1137,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-teal-700">Get reminded 24 hours before your appointments</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={notificationPreferences.appointmentReminders}
+                  onChange={() => handleNotificationToggle('appointmentReminders')}
+                  disabled={isLoadingNotifications}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 disabled:opacity-50"></div>
               </label>
             </div>
             <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors">
@@ -1083,8 +1158,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-teal-700">Get notified when lab results and test reports are available</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={notificationPreferences.testResults}
+                  onChange={() => handleNotificationToggle('testResults')}
+                  disabled={isLoadingNotifications}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 disabled:opacity-50"></div>
               </label>
             </div>
           </div>
