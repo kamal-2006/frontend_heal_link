@@ -118,7 +118,7 @@ export default function PatientDashboard() {
   const unreadReportsCount = reports.filter(report => report.status === 'New').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
@@ -155,23 +155,23 @@ export default function PatientDashboard() {
       )}
       
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <>
           {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* New Appointment Card */}
         <Link href="/patient/dashboard/book" className="block group">
-          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Book Appointment</h3>
                 <p className="text-blue-700 text-sm leading-relaxed">Schedule your next visit</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
@@ -189,14 +189,14 @@ export default function PatientDashboard() {
 
         {/* Reports Card */}
         <Link href="/patient/reports" className="block group">
-          <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medical Reports</h3>
                 <p className="text-purple-700 text-sm leading-relaxed">Lab results & documents</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
@@ -217,14 +217,14 @@ export default function PatientDashboard() {
 
         {/* Current Medications Card */}
         <Link href="/patient/medications" className="block group">
-          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medications</h3>
                 <p className="text-green-700 text-sm leading-relaxed">Active prescriptions</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-green-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-green-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
@@ -245,14 +245,14 @@ export default function PatientDashboard() {
 
         {/* Upcoming Appointments Card */}
         <Link href="/patient/appointments" className="block group">
-          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Appointments</h3>
                 <p className="text-amber-700 text-sm leading-relaxed">Scheduled visits</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
