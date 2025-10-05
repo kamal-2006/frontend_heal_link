@@ -54,6 +54,8 @@ const handleSubmit = async (e) => {
         router.push('/doctor/dashboard');
       } else if (data.role === 'patient') {
         router.push('/patient/dashboard');
+      } else if (data.role === 'nurse') {
+        router.push('/nurse');
       } else {
         router.push('/');
       }
@@ -212,6 +214,8 @@ const handleSubmit = async (e) => {
                 {isLoading ? "Signing in..." : "Sign in"}
               </button>
             </div>
+
+
 
             {/* Divider */}
             <div className="mt-6 relative">
