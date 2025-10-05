@@ -50,7 +50,12 @@ const handleSubmit = async (e) => {
     if (res.ok) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
-      if (data.role === 'doctor') {
+      
+      console.log('Login successful - Role:', data.role);
+      
+      if (data.role === 'admin') {
+        router.push('/admin');
+      } else if (data.role === 'doctor') {
         router.push('/doctor/dashboard');
       } else if (data.role === 'patient') {
         router.push('/patient/dashboard');

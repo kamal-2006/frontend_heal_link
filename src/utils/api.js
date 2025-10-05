@@ -3,6 +3,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 // Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  
+  console.log('Debug - API call with token:', !!token, 'role:', role);
+  
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` })
@@ -12,14 +16,36 @@ const getAuthHeaders = () => {
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
   try {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    
+    console.log(`Making API request to ${endpoint}`);
+    console.log('Auth details:', { hasToken: !!token, role });
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: getAuthHeaders(),
       ...options
     });
 
     const data = await response.json();
+    
+    console.log('API Response status:', response.status);
+    console.log('API Response data:', data);
 
     if (!response.ok) {
+      // Handle specific authorization errors
+      if (response.status === 401 || response.status === 403) {
+        console.error('Authorization error:', data.error);
+        // Clear invalid token
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('user');
+        
+        // Redirect to login if not authorized
+        if (window.location.pathname.includes('/admin')) {
+          window.location.href = '/login';
+        }
+      }
       throw new Error(data.error || 'API request failed');
     }
 
