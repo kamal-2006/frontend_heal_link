@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
+import { post } from "@/utils/api";
 
 export default function Signup() {
   const router = useRouter();
@@ -46,27 +47,19 @@ export default function Signup() {
     setError('');
     
     try {
-      const res = await fetch("http://localhost:5000/api/v1/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          role: "patient",
-          password: formData.password
-        }),
+      const res = await post("/auth/register", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        role: "patient",
+        password: formData.password
       });
-      
-      const data = await res.json();
       
       if (res.ok) {
         router.push('/login');
       } else {
-        setError(data.error || "Registration failed");
+        setError(res.error || "Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -500,3 +493,4 @@ export default function Signup() {
     </div>
   );
 }
+            

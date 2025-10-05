@@ -2,83 +2,105 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
+import { post } from "@/utils/api";
 
 export default function Login() {
   const router = useRouter();
-  const googleClientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
+  const googleClientId = (
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
+  ).trim();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [pendingToken, setPendingToken] = useState(null);
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
- const handleInputChange = (e) => {
-  const { name, value, type, checked } = e.target;
-  setFormData((prev) => ({
-    ...prev,
-    [name]: type === "checkbox" ? checked : value,
-  }));
-};
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
-  try {
-    const res = await fetch("http://localhost:5000/api/v1/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: formData.email,
-        password: formData.password,
-      }),
-    });
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
-      if (data.role === 'doctor') {
-        router.push('/doctor/dashboard');
-      } else if (data.role === 'patient') {
-        router.push('/patient/dashboard');
-      } else if (data.role === 'nurse') {
-        router.push('/nurse');
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        
+        console.log('Login successful - Role:', data.role);
+        
+        if (data.role === 'admin') {
+          router.push('/admin');
+        } else if (data.role === 'doctor') {
+          router.push('/doctor/dashboard');
+        } else if (data.role === 'patient') {
+          router.push('/patient/dashboard');
+        } else if (data.role === 'nurse') {
+          router.push('/nurse');
+        } else {
+          router.push('/');
+        }
       } else {
-        router.push('/');
+        setError(data.error || "Something went wrong");
       }
-    } else {
-      setError(data.error || "Something went wrong");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An error occurred during login.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Login error:", error);
-    setError("An error occurred during login.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-50 to-blue-500 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Logo and Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-8 py-6 text-center">
-          <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 mb-4"
+          >
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-white">Heal Link</h1>
@@ -86,7 +108,7 @@ const handleSubmit = async (e) => {
           <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
           <p className="text-blue-100">Sign in to your account to continue</p>
         </div>
-        
+
         <div className="px-8 py-8">
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
@@ -108,8 +130,8 @@ const handleSubmit = async (e) => {
                   className="block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 peer"
                   placeholder=" "
                 />
-                <label 
-                  htmlFor="email" 
+                <label
+                  htmlFor="email"
                   className="absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 origin-left peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-blue-600 peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75 peer-[:not(:placeholder-shown)]:text-blue-600"
                 >
                   Email Address
@@ -131,8 +153,8 @@ const handleSubmit = async (e) => {
                   className="block w-full px-4 pt-6 pb-2 pr-12 text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 peer"
                   placeholder=" "
                 />
-                <label 
-                  htmlFor="password" 
+                <label
+                  htmlFor="password"
                   className="absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 origin-left peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-blue-600 peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75 peer-[:not(:placeholder-shown)]:text-blue-600"
                 >
                   Password
@@ -192,13 +214,19 @@ const handleSubmit = async (e) => {
                   onChange={handleInputChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                <label
+                  htmlFor="rememberMe"
+                  className="ml-2 block text-sm text-gray-700"
+                >
                   Remember me
                 </label>
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <a
+                  href="#"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   Forgot password?
                 </a>
               </div>
@@ -223,7 +251,9 @@ const handleSubmit = async (e) => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-gray-500">
+                  Or continue with
+                </span>
               </div>
             </div>
 
@@ -233,38 +263,48 @@ const handleSubmit = async (e) => {
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     try {
-                      setError('');
+                      setError("");
                       const tokenId = credentialResponse?.credential;
                       if (!tokenId) {
-                        setError('Google sign-in failed: missing credential');
+                        setError("Google sign-in failed: missing credential");
                         return;
                       }
-                      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/v1/auth/google`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tokenId })
-                      });
+                      const res = await fetch(
+                        `${
+                          process.env.NEXT_PUBLIC_API_BASE_URL ||
+                          "http://localhost:5000"
+                        }/api/v1/auth/google`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ tokenId }),
+                        }
+                      );
                       const data = await res.json();
                       if (!res.ok) {
-                        setError(data.error || 'Google sign-in failed');
+                        setError(data.error || "Google sign-in failed");
                         return;
                       }
-                      localStorage.setItem('token', data.token);
-                      localStorage.setItem('role', data.role || 'patient');
+                      localStorage.setItem("token", data.token);
+                      localStorage.setItem("role", data.role || "patient");
                       setPendingToken(data.token);
                       setShowRoleDialog(true);
                     } catch (e) {
-                      setError('Google sign-in error');
+                      setError("Google sign-in error");
                     }
                   }}
-                  onError={() => setError('Google sign-in failed')}
+                  onError={() => setError("Google sign-in failed")}
                 />
               ) : (
                 <button
                   type="button"
                   className="inline-flex justify-center py-3 px-6 border border-gray-300 rounded-xl bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed"
                   title="Google Client ID not configured"
-                  onClick={() => setError('Google Client ID is not configured. Add NEXT_PUBLIC_GOOGLE_CLIENT_ID to .env.local and restart the server.')}
+                  onClick={() =>
+                    setError(
+                      "Google Client ID is not configured. Add NEXT_PUBLIC_GOOGLE_CLIENT_ID to .env.local and restart the server."
+                    )
+                  }
                 >
                   <span>Sign in with Google</span>
                 </button>
@@ -276,7 +316,10 @@ const handleSubmit = async (e) => {
           <div className="mt-6 text-center">
             <span className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link
+                href="/signup"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
                 Sign up now
               </Link>
             </span>
@@ -288,7 +331,9 @@ const handleSubmit = async (e) => {
       {showRoleDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Continue as</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Continue as
+            </h3>
             <p className="text-gray-600 mb-6">Choose your role to proceed.</p>
             <div className="grid grid-cols-1 gap-3">
               <button
@@ -297,32 +342,38 @@ const handleSubmit = async (e) => {
                   if (!pendingToken) return;
                   try {
                     setIsUpdatingRole(true);
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/v1/auth/update-role`, {
-                      method: 'PUT',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${pendingToken}`,
-                      },
-                      body: JSON.stringify({ role: 'doctor' })
-                    });
+                    const res = await fetch(
+                      `${
+                        process.env.NEXT_PUBLIC_API_BASE_URL ||
+                        "http://localhost:5000"
+                      }/api/v1/auth/update-role`,
+                      {
+                        method: "PUT",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${pendingToken}`,
+                        },
+                        body: JSON.stringify({ role: "doctor" }),
+                      }
+                    );
                     const data = await res.json();
                     if (!res.ok) {
-                      setError(data.error || 'Failed to update role');
+                      setError(data.error || "Failed to update role");
                       setIsUpdatingRole(false);
                       return;
                     }
-                    localStorage.setItem('role', data.data.role);
+                    localStorage.setItem("role", data.data.role);
                     setShowRoleDialog(false);
-                    router.push('/doctor/dashboard');
+                    router.push("/doctor/dashboard");
                   } catch (e) {
-                    setError('Failed to update role');
+                    setError("Failed to update role");
                   } finally {
                     setIsUpdatingRole(false);
                   }
                 }}
                 className="w-full py-3 px-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {isUpdatingRole ? 'Continuing…' : 'Doctor'}
+                {isUpdatingRole ? "Continuing…" : "Doctor"}
               </button>
               <button
                 disabled={isUpdatingRole}
@@ -330,32 +381,38 @@ const handleSubmit = async (e) => {
                   if (!pendingToken) return;
                   try {
                     setIsUpdatingRole(true);
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/v1/auth/update-role`, {
-                      method: 'PUT',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${pendingToken}`,
-                      },
-                      body: JSON.stringify({ role: 'patient' })
-                    });
+                    const res = await fetch(
+                      `${
+                        process.env.NEXT_PUBLIC_API_BASE_URL ||
+                        "http://localhost:5000"
+                      }/api/v1/auth/update-role`,
+                      {
+                        method: "PUT",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${pendingToken}`,
+                        },
+                        body: JSON.stringify({ role: "patient" }),
+                      }
+                    );
                     const data = await res.json();
                     if (!res.ok) {
-                      setError(data.error || 'Failed to update role');
+                      setError(data.error || "Failed to update role");
                       setIsUpdatingRole(false);
                       return;
                     }
-                    localStorage.setItem('role', data.data.role);
+                    localStorage.setItem("role", data.data.role);
                     setShowRoleDialog(false);
-                    router.push('/patient/dashboard');
+                    router.push("/patient/dashboard");
                   } catch (e) {
-                    setError('Failed to update role');
+                    setError("Failed to update role");
                   } finally {
                     setIsUpdatingRole(false);
                   }
                 }}
                 className="w-full py-3 px-4 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:opacity-50"
               >
-                {isUpdatingRole ? 'Continuing…' : 'Patient'}
+                {isUpdatingRole ? "Continuing…" : "Patient"}
               </button>
               <button
                 disabled={isUpdatingRole}
