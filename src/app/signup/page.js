@@ -63,7 +63,7 @@ export default function Signup() {
       }
     } catch (error) {
       console.error("Registration error:", error);
-      setError("An error occurred during registration.");
+      setError(error.message || "An error occurred during registration.");
     } finally {
       setIsLoading(false);
     }

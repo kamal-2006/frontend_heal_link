@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import useUser from "../../../hooks/useUser";
-import { toTitleCase } from "../../../utils/text";
+import useUser from "@/hooks/useUser";
+import { toTitleCase } from "@/utils/text";
 
 export default function DoctorDashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
