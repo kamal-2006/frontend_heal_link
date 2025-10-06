@@ -33,20 +33,32 @@ const apiRequest = async (endpoint, options = {}) => {
     console.log('API Response data:', data);
 
     if (!response.ok) {
-      // Handle specific authorization errors
+      // Handle authorization errors specially
       if (response.status === 401 || response.status === 403) {
         console.error('Authorization error:', data.error);
         // Clear invalid token
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('user');
-        
-        // Redirect to login if not authorized
+
+        // Redirect to login if not authorized (keep UX flow)
         if (window.location.pathname.includes('/admin')) {
           window.location.href = '/login';
         }
+        // Throw so callers know an auth error occurred
+        throw new Error(data.error || 'Authorization error');
       }
-      throw new Error(data.error || 'API request failed');
+
+      // For non-auth errors, return a structured response so callers can
+      // handle errors (like missing patient) without the whole app crashing.
+      const errMsg = data?.error || 'API request failed';
+      console.warn(`API ${endpoint} returned ${response.status}:`, errMsg);
+
+      return {
+        data: null,
+        error: errMsg,
+        status: response.status,
+      };
     }
 
     return data;
@@ -167,9 +179,10 @@ export const appointmentApi = {
     }),
 
   // Cancel appointment
-  cancelAppointment: (id) =>
+  cancelAppointment: (id, data = {}) =>
     apiRequest(`/appointments/${id}/cancel`, {
       method: "PUT",
+      body: JSON.stringify(data),
     }),
 
   // Update appointment
@@ -260,6 +273,61 @@ export const notificationApi = {
       method: "PUT",
       body: JSON.stringify(preferences),
     }),
+};
+
+// Medical Reports API functions
+export const reportsApi = {
+  // Upload medical report with files
+  uploadReport: (formData) => {
+    // For file uploads, we need to use fetch directly with FormData
+    const token = localStorage.getItem('token');
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"}/records/patient/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    }).then(response => response.json());
+  },
+
+  // Get patient's own medical records
+  getMyReports: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.recordType) queryParams.append('recordType', params.recordType);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+    
+    const queryString = queryParams.toString();
+    return apiRequest(`/records/patient/my-records${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // Update medical record
+  updateReport: (id, data) =>
+    apiRequest(`/records/patient/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // Delete medical record
+  deleteReport: (id) =>
+    apiRequest(`/records/patient/${id}`, {
+      method: "DELETE",
+    }),
+
+  // Get single medical record
+  getReport: (id) => apiRequest(`/records/${id}`),
+
+  // Download medical record file
+  downloadReport: (id) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"}/records/${id}/download`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }
 };
 
 export default apiRequest;

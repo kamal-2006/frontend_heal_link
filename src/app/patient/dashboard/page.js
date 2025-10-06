@@ -20,6 +20,8 @@ export default function PatientDashboard() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showReasonDialog, setShowReasonDialog] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,12 +39,21 @@ export default function PatientDashboard() {
         const [appointmentsRes, medicationsRes, dashboardRes] = await Promise.all([
           appointmentApi.getMyAppointments().catch(() => ({ data: [] })),
           medicationApi.getMyActiveMedications().catch(() => ({ data: [] })),
-          patientApi.getDashboard().catch(() => ({ data: null }))
+          patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' }))
         ]);
 
-        setAppointments(appointmentsRes.data || []);
-        setPrescriptions(medicationsRes.data || []);
-        setDashboardData(dashboardRes.data);
+        setAppointments(appointmentsRes?.data || []);
+        setPrescriptions(medicationsRes?.data || []);
+
+        // dashboardRes may be { data: null, error, status } when patient not found
+        if (dashboardRes && typeof dashboardRes === 'object') {
+          setDashboardData(dashboardRes.data ?? null);
+          if (dashboardRes.error) {
+            console.warn('Patient dashboard error:', dashboardRes.error);
+          }
+        } else {
+          setDashboardData(null);
+        }
 
         // Mock reports data for now
         setReports([
@@ -63,6 +74,16 @@ export default function PatientDashboard() {
   const handleCancelAppointment = async (appointmentId) => {
     const appointment = appointments.find(apt => apt._id === appointmentId);
     setAppointmentToCancel(appointment);
+    setCancellationReason('');
+    setShowReasonDialog(true);
+  };
+
+  const proceedWithCancellation = () => {
+    if (!cancellationReason.trim()) {
+      alert('Please provide a reason for cancellation');
+      return;
+    }
+    setShowReasonDialog(false);
     setShowConfirmDialog(true);
   };
 
@@ -74,7 +95,9 @@ export default function PatientDashboard() {
       setMessage({ type: '', text: '' });
       setShowConfirmDialog(false);
       
-      const result = await appointmentApi.cancelAppointment(appointmentToCancel._id);
+      const result = await appointmentApi.cancelAppointment(appointmentToCancel._id, {
+        reason: cancellationReason.trim()
+      });
       
       setMessage({ 
         type: 'success', 
@@ -98,7 +121,23 @@ export default function PatientDashboard() {
 
   const cancelCancellation = () => {
     setShowConfirmDialog(false);
+    setShowReasonDialog(false);
     setAppointmentToCancel(null);
+    setCancellationReason('');
+  };
+
+  // Helper function to get the actual status of an appointment based on current time
+  const getActualAppointmentStatus = (appointment) => {
+    const appointmentDate = new Date(appointment.date);
+    const now = new Date();
+    
+    // If appointment is in the past and was pending or confirmed, mark as completed
+    if (appointmentDate < now && (appointment.status === 'pending' || appointment.status === 'confirmed')) {
+      return 'completed';
+    }
+    
+    // Otherwise, return the original status
+    return appointment.status;
   };
 
   // Get upcoming appointments (max 3) - latest booked first
@@ -106,7 +145,10 @@ export default function PatientDashboard() {
     .filter(app => {
       const appointmentDate = new Date(app.date);
       const now = new Date();
-      return (app.status === 'pending' || app.status === 'confirmed') && appointmentDate >= now;
+      const actualStatus = getActualAppointmentStatus(app);
+      
+      // Only show future appointments that are pending or confirmed
+      return (actualStatus === 'pending' || actualStatus === 'confirmed') && appointmentDate >= now;
     })
     .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
     .slice(0, 3);
@@ -312,13 +354,19 @@ export default function PatientDashboard() {
                       </p>
                     </div>
                     <span className={`px-3 py-1 text-xs rounded-full font-medium ${
-                      appointment.status === 'confirmed' 
-                        ? 'bg-green-100 text-green-800' 
+                      getActualAppointmentStatus(appointment) === 'confirmed' 
+                        ? 'bg-green-100 text-green-800'
+                        : getActualAppointmentStatus(appointment) === 'completed'
+                        ? 'bg-gray-100 text-gray-700'
                         : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {appointment.status === 'confirmed' ? 'Confirmed' : 'Scheduled'}
+                      {getActualAppointmentStatus(appointment) === 'confirmed' 
+                        ? 'Confirmed' 
+                        : getActualAppointmentStatus(appointment) === 'completed'
+                        ? 'Completed'
+                        : 'Scheduled'}
                     </span>
-                    {(appointment.status === 'confirmed' || appointment.status === 'pending') && 
+                    {(getActualAppointmentStatus(appointment) === 'confirmed' || getActualAppointmentStatus(appointment) === 'pending') && 
                      new Date(appointment.date) > new Date() && (
                       <button
                         onClick={() => handleCancelAppointment(appointment._id)}
@@ -391,6 +439,48 @@ export default function PatientDashboard() {
         </div>
       </div>
         </>
+      )}
+
+      {/* Cancellation Reason Dialog */}
+      {showReasonDialog && appointmentToCancel && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Reason for Cancellation
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Please provide a reason for cancelling your appointment with Dr. {appointmentToCancel.doctor?.firstName} {appointmentToCancel.doctor?.lastName} on {new Date(appointmentToCancel.date).toLocaleDateString()}.
+              </p>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Enter your reason for cancellation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={4}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {cancellationReason.length}/500 characters
+              </p>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={cancelCancellation}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={proceedWithCancellation}
+                  disabled={!cancellationReason.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Dialog */}
