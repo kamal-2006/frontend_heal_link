@@ -1,12 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-  
-  console.log('Debug - API call with token:', !!token, 'role:', role);
-  
+  const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -16,37 +13,42 @@ const getAuthHeaders = () => {
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
   try {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    
-    console.log(`Making API request to ${endpoint}`);
-    console.log('Auth details:', { hasToken: !!token, role });
-    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: getAuthHeaders(),
       ...options,
     });
 
-    const data = await response.json();
-    
-    console.log('API Response status:', response.status);
-    console.log('API Response data:', data);
+    let data = null;
+
+    // Only try to parse JSON if response has content
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("Failed to parse JSON response:", jsonError);
+        data = null;
+      }
+    }
 
     if (!response.ok) {
       // Handle specific authorization errors
       if (response.status === 401 || response.status === 403) {
-        console.error('Authorization error:', data.error);
+        const errorMessage = data?.error || "Authentication failed";
+        console.error("Authorization error:", errorMessage);
         // Clear invalid token
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('user');
-        
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("user");
+
         // Redirect to login if not authorized
-        if (window.location.pathname.includes('/admin')) {
-          window.location.href = '/login';
+        if (window.location.pathname.includes("/admin")) {
+          window.location.href = "/login";
         }
       }
-      throw new Error(data.error || 'API request failed');
+      throw new Error(
+        data?.error || `API request failed with status ${response.status}`
+      );
     }
 
     return data;
@@ -55,6 +57,25 @@ const apiRequest = async (endpoint, options = {}) => {
     throw error;
   }
 };
+
+export const get = (endpoint) => apiRequest(endpoint);
+
+export const post = (endpoint, body) =>
+  apiRequest(endpoint, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const put = (endpoint, body) =>
+  apiRequest(endpoint, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+
+export const del = (endpoint) =>
+  apiRequest(endpoint, {
+    method: "DELETE",
+  });
 
 // Patient API functions
 export const patientApi = {
@@ -73,6 +94,9 @@ export const patientApi = {
 
   // Get patient appointments
   getAppointments: () => apiRequest("/appointments"),
+
+  // Get all patients
+  getPatients: () => apiRequest("/patients"),
 
   // Get patient medical records
   getMedicalRecords: () => apiRequest("/medicalRecords"),
@@ -108,20 +132,23 @@ export const authApi = {
     }),
 
   // 2FA functions
-  enable2FA: () => apiRequest('/auth/2fa/enable', {
-    method: 'POST'
-  }),
+  enable2FA: () =>
+    apiRequest("/auth/2fa/enable", {
+      method: "POST",
+    }),
 
-  disable2FA: () => apiRequest('/auth/2fa/disable', {
-    method: 'POST'
-  }),
+  disable2FA: () =>
+    apiRequest("/auth/2fa/disable", {
+      method: "POST",
+    }),
 
-  verify2FA: (data) => apiRequest('/auth/2fa/verify', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
+  verify2FA: (data) =>
+    apiRequest("/auth/2fa/verify", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
-  get2FAStatus: () => apiRequest('/auth/2fa/status')
+  get2FAStatus: () => apiRequest("/auth/2fa/status"),
 };
 
 // Doctor API functions
@@ -159,6 +186,20 @@ export const appointmentApi = {
   // Get patient appointments
   getMyAppointments: () => apiRequest("/appointments"),
 
+  // Get doctor appointments - use the correct endpoint
+  getDoctorAppointments: () => {
+    return apiRequest("/doctor/appointments");
+  },
+
+  // Get all appointments (for the current user based on role)
+  getAppointments: () => {
+    const role = localStorage.getItem("role");
+    if (role === "doctor") {
+      return appointmentApi.getDoctorAppointments();
+    }
+    return apiRequest("/appointments");
+  },
+
   // Book new appointment
   bookAppointment: (appointmentData) =>
     apiRequest("/appointments/book", {
@@ -178,6 +219,16 @@ export const appointmentApi = {
       method: "PUT",
       body: JSON.stringify(appointmentData),
     }),
+
+  // Doctor-specific functions
+  updateAppointmentStatus: (id, status) =>
+    apiRequest(`/appointments/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    }),
+
+  // Get appointment details
+  getAppointment: (id) => apiRequest(`/appointments/${id}`),
 };
 
 // Medication API functions
@@ -263,4 +314,3 @@ export const notificationApi = {
 };
 
 export default apiRequest;
-
