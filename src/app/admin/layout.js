@@ -284,11 +284,19 @@ export default function AdminLayout({ children }) {
         <main
           className={`transition-all duration-300 ${
             isCollapsed ? "ml-20" : "ml-64"
-          } p-6 w-full`}
+          } w-full`}
         >
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            {children}
-          </div>
+          {pathname === '/admin/appointments' ? (
+            // Full width for appointments page
+            <div className="p-0">
+              {children}
+            </div>
+          ) : (
+            // Standard container for other pages
+            <div className="bg-white rounded-lg shadow-sm p-6 m-6">
+              {children}
+            </div>
+          )}
         </main>
       </div>
     </div>

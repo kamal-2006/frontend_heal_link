@@ -14,6 +14,7 @@ export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState(null);
@@ -36,14 +37,18 @@ export default function PatientDashboard() {
       try {
         // Fetch patient-specific data
         const { appointmentApi, medicationApi } = await import('../../../utils/api');
-        const [appointmentsRes, medicationsRes, dashboardRes] = await Promise.all([
+        const [appointmentsRes, medicationsRes, notificationsRes, dashboardRes] = await Promise.all([
           appointmentApi.getMyAppointments().catch(() => ({ data: [] })),
           medicationApi.getMyActiveMedications().catch(() => ({ data: [] })),
+          fetch('http://localhost:5000/api/v1/notifications/patient', {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(res => res.json()).catch(() => ({ data: [] })),
           patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' }))
         ]);
 
         setAppointments(appointmentsRes?.data || []);
         setPrescriptions(medicationsRes?.data || []);
+        setNotifications(notificationsRes?.data || []);
 
         // dashboardRes may be { data: null, error, status } when patient not found
         if (dashboardRes && typeof dashboardRes === 'object') {
@@ -314,7 +319,36 @@ export default function PatientDashboard() {
         </Link>
       </div>
 
-
+      {/* Notifications Section */}
+      {notifications && notifications.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
+            <h3 className="text-lg font-medium text-gray-900">Recent Notifications</h3>
+          </div>
+          <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+            {notifications.slice(0, 5).map((notification, index) => (
+              <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start space-x-3">
+                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
+                    notification.type === 'appointment_rescheduled' ? 'bg-orange-500' :
+                    notification.type === 'appointment_confirmed' ? 'bg-green-500' :
+                    'bg-blue-500'
+                  }`}></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(notification.createdAt || new Date()).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Appointments Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">

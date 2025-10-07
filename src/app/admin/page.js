@@ -1,36 +1,144 @@
 'use client';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export default function AdminDashboard() {
-  const stats = {
+  const [stats, setStats] = useState({
     doctors: {
-      total: 15,
-      available: 12,
-      unavailable: 3
+      total: 0,
+      available: 0,
+      unavailable: 0
     },
     patients: {
-      total: 150,
-      newThisMonth: 12,
-      activeAppointments: 45
+      total: 0,
+      newThisMonth: 0,
+      activeAppointments: 0
     },
     appointments: {
-      upcoming: 25,
-      rescheduled: 5,
-      cancelled: 3
+      upcoming: 0,
+      rescheduled: 0,
+      cancelled: 0
     },
     feedback: {
-      pending: 8,
-      inProgress: 4,
-      resolved: 15
+      pending: 0,
+      inProgress: 0,
+      resolved: 0
+    }
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch dashboard statistics from backend
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
+      const [doctorsRes, patientsRes, appointmentsRes, feedbackRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/doctors`),
+        fetch(`${API_BASE_URL}/patients/admin/patients`),
+        fetch(`${API_BASE_URL}/appointments`),
+        fetch(`${API_BASE_URL}/feedback`) // Assuming this endpoint exists
+      ]);
+
+      // Process doctors data
+      const doctorsData = await doctorsRes.json();
+      const doctors = doctorsData.success ? doctorsData.data : [];
+      
+      // Process patients data
+      const patientsData = await patientsRes.json();
+      const patients = patientsData.success ? patientsData.data : [];
+      
+      // Process appointments data
+      const appointmentsData = await appointmentsRes.json();
+      const appointments = appointmentsData.success ? appointmentsData.data : [];
+      
+      // Process feedback data (if available)
+      const feedbackData = feedbackRes.ok ? await feedbackRes.json() : { data: [] };
+      const feedback = feedbackData.success ? feedbackData.data : [];
+
+      // Calculate statistics
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+
+      // Calculate new patients this month
+      const newPatientsThisMonth = patients.filter(patient => {
+        const createdDate = new Date(patient.createdAt);
+        return createdDate.getMonth() === currentMonth && 
+               createdDate.getFullYear() === currentYear;
+      }).length;
+
+      // Calculate appointment statistics
+      const today = new Date().toDateString();
+      const upcomingAppointments = appointments.filter(apt => 
+        new Date(apt.date).getTime() >= new Date().getTime()
+      ).length;
+
+      setStats({
+        doctors: {
+          total: doctors.length,
+          available: doctors.filter(d => d.isActive).length,
+          unavailable: doctors.filter(d => !d.isActive).length
+        },
+        patients: {
+          total: patients.length,
+          newThisMonth: newPatientsThisMonth,
+          activeAppointments: upcomingAppointments
+        },
+        appointments: {
+          upcoming: upcomingAppointments,
+          rescheduled: appointments.filter(apt => apt.isRescheduled === true).length,
+          cancelled: appointments.filter(apt => apt.status === 'cancelled').length
+        },
+        feedback: {
+          pending: feedback.filter(f => f.status === 'pending').length,
+          inProgress: feedback.filter(f => f.status === 'inProgress').length,
+          resolved: feedback.filter(f => f.status === 'resolved').length
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      // Keep default values on error
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading dashboard statistics...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-        <div className="text-sm font-medium text-gray-500">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={fetchDashboardStats}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+          <div className="text-sm font-medium text-gray-500">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
         </div>
       </div>
 

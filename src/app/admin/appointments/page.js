@@ -8,6 +8,7 @@ export default function AppointmentManagement() {
   const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
 
   // Fetch appointments from database
@@ -52,7 +53,18 @@ export default function AppointmentManagement() {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  const formatDateTime = (isoDate, time) => `${formatDate(isoDate)} • ${time}`;
+  const formatTime = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  };
+
+  const formatDateTime = (isoDate, time) => `${formatDate(isoDate)} • ${time || formatTime(isoDate)}`;
+
+  const formatCompactDateTime = (appointment) => {
+    const date = formatDate(appointment.date);
+    const time = appointment.time || formatTime(appointment.date);
+    return { date, time };
+  };
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -152,6 +164,103 @@ export default function AppointmentManagement() {
     }
   };
 
+  // Handle reschedule appointment
+  const handleRescheduleAppointment = async (appointmentId, newDateTime) => {
+    try {
+      console.log('Rescheduling appointment:', appointmentId, 'to:', newDateTime);
+      
+      // Get current appointment to preserve original date
+      const currentAppointment = appointments.find(app => app._id === appointmentId);
+      
+      const updateData = {
+        date: newDateTime,
+        status: 'confirmed',
+        isRescheduled: true,
+        originalDate: currentAppointment.originalDate || currentAppointment.date, // Preserve original date
+        rescheduleCount: (currentAppointment.rescheduleCount || 0) + 1
+      };
+      
+      const response = await fetch(`http://localhost:5000/api/v1/appointments/${appointmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      const result = await response.json();
+      console.log('Reschedule response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Failed to reschedule appointment');
+      }
+      
+      // Send notification to patient
+      await sendRescheduleNotification(appointmentId, newDateTime);
+      
+      // Update local state
+      setAppointments(appointments.map(app => 
+        app._id === appointmentId ? { 
+          ...app, 
+          ...updateData
+        } : app
+      ));
+      
+      setSuccessMessage('Appointment rescheduled successfully and patient notified');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Close modal
+      setIsDetailsModalOpen(false);
+      
+      // Refresh appointments to get latest data
+      fetchAppointments();
+    } catch (err) {
+      console.error('Error rescheduling appointment:', err);
+      setError(err.message || 'Failed to reschedule appointment');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Send reschedule notification to patient
+  const sendRescheduleNotification = async (appointmentId, newDateTime) => {
+    try {
+      const appointment = appointments.find(app => app._id === appointmentId);
+      if (!appointment) {
+        console.warn('Appointment not found for notification');
+        return;
+      }
+
+      const notificationData = {
+        patientId: appointment.patient._id,
+        type: 'appointment_rescheduled',
+        title: 'Appointment Rescheduled',
+        message: `Your appointment with Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName} has been rescheduled to ${new Date(newDateTime).toLocaleDateString()} at ${new Date(newDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`,
+        appointmentId: appointmentId,
+        newDateTime: newDateTime
+      };
+
+      console.log('Sending notification:', notificationData);
+
+      const notificationResponse = await fetch(`http://localhost:5000/api/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(notificationData)
+      });
+
+      if (!notificationResponse.ok) {
+        const errorData = await notificationResponse.json();
+        console.warn('Failed to send notification to patient:', errorData);
+      } else {
+        console.log('Reschedule notification sent to patient successfully');
+      }
+    } catch (err) {
+      console.warn('Error sending notification (non-critical):', err);
+      // Don't throw error - notification failure shouldn't block reschedule
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -206,7 +315,7 @@ export default function AppointmentManagement() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Doctor Name
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date & Time
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -225,7 +334,7 @@ export default function AppointmentManagement() {
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center">
                       <div className="flex justify-center items-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-2 text-gray-600">Loading appointments...</span>
                       </div>
                     </td>
@@ -258,16 +367,28 @@ export default function AppointmentManagement() {
                         </div>
                         <div className="text-xs text-gray-500">{appointment.doctor?.specialty || 'General Medicine'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatDateTime(appointment.date)}</div>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {formatCompactDateTime(appointment).date}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatCompactDateTime(appointment).time}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{appointment.reason}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(appointment.status)}`}>
-                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                        </span>
+                        <div className="flex flex-col items-center space-y-1">
+                          <span className={`inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(appointment.status)}`}>
+                            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                          </span>
+                          {appointment.isRescheduled && (
+                            <span className="inline-flex px-2 py-1 text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                              Rescheduled
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
@@ -294,7 +415,7 @@ export default function AppointmentManagement() {
         <AppointmentDetailsModal 
           appointment={selectedAppointment}
           onClose={() => setIsDetailsModalOpen(false)}
-          onUpdate={handleUpdateAppointment}
+          onReschedule={handleRescheduleAppointment}
           onDelete={handleDeleteAppointment}
         />
       )}
@@ -302,9 +423,11 @@ export default function AppointmentManagement() {
   );
 }
 // Appointment Details Modal Component
-function AppointmentDetailsModal({ appointment, onClose, onUpdate, onDelete }) {
+function AppointmentDetailsModal({ appointment, onClose, onReschedule, onDelete }) {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [showTimeSlots, setShowTimeSlots] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
   useEffect(() => {
     if (appointment) {
@@ -319,17 +442,26 @@ function AppointmentDetailsModal({ appointment, onClose, onUpdate, onDelete }) {
     }
   }, [appointment]);
 
-  const handleUpdate = () => {
-    if (newDate && newTime) {
-      // Combine date and time into ISO string
-      const dateTime = new Date(`${newDate}T${newTime}`);
-      onUpdate(appointment._id, { date: dateTime.toISOString() });
+  const handleReschedule = () => {
+    if (showTimeSlots && selectedTimeSlot && newDate) {
+      // Combine date and selected time slot
+      const dateTime = new Date(`${newDate}T${selectedTimeSlot}`);
+      onReschedule(appointment._id, dateTime.toISOString());
+    } else {
+      // Show time slots for selection
+      setShowTimeSlots(true);
     }
   };
 
   const handleDelete = () => {
     onDelete(appointment._id);
   };
+
+  // Time slots array - same as used in doctor management
+  const timeSlots = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+  ];
 
   const formatDate = (dateString) => {
     const d = new Date(dateString);
@@ -429,15 +561,32 @@ function AppointmentDetailsModal({ appointment, onClose, onUpdate, onDelete }) {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">New Time</label>
-              <input
-                type="time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+            {!showTimeSlots ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Current Time</label>
+                <p className="text-sm text-gray-900 mt-1 p-2 bg-gray-50 rounded-md">{formatTime(appointment.date)}</p>
+                <p className="text-xs text-gray-500 mt-1">Click "Reschedule" to select new time</p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Select New Time Slot</label>
+                <select
+                  value={selectedTimeSlot}
+                  onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <option value="">Select a time slot...</option>
+                  {timeSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+                {selectedTimeSlot && (
+                  <p className="text-sm text-green-600 mt-2">✓ Selected: {selectedTimeSlot}</p>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Full-width fields */}
@@ -476,10 +625,15 @@ function AppointmentDetailsModal({ appointment, onClose, onUpdate, onDelete }) {
                 Close
               </button>
               <button
-                onClick={handleUpdate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={handleReschedule}
+                disabled={showTimeSlots && (!newDate || !selectedTimeSlot)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  showTimeSlots && (!newDate || !selectedTimeSlot)
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
               >
-                Update
+                {showTimeSlots ? 'Confirm Reschedule' : 'Reschedule'}
               </button>
             </div>
           </div>

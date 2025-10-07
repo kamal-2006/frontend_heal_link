@@ -100,7 +100,10 @@ export default function PatientManagement() {
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <div className="text-xl text-gray-600">Loading patients from database...</div>
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading patients from database...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -147,39 +150,6 @@ export default function PatientManagement() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Patient Management</h1>
               <p className="text-gray-600 mt-1">{today}</p>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Patients</h3>
-              <p className="text-3xl font-bold text-indigo-600">{patients.length}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Patients</h3>
-              <p className="text-3xl font-bold text-green-600">
-                {patients.filter(p => p.user).length}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">New This Month</h3>
-              <p className="text-3xl font-bold text-blue-600">
-                {patients.filter(p => {
-                  const createdDate = new Date(p.createdAt);
-                  const currentDate = new Date();
-                  return createdDate.getMonth() === currentDate.getMonth() && 
-                         createdDate.getFullYear() === currentDate.getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Appointments Today</h3>
-              <p className="text-3xl font-bold text-purple-600">
-                {patients.reduce((total, patient) => {
-                  return total + (patient.stats?.appointmentsToday || 0);
-                }, 0)}
-              </p>
             </div>
           </div>
 
