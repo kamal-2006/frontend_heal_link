@@ -46,8 +46,8 @@ export default function PatientAppointments() {
     const appointmentDate = new Date(appointment.date);
     const now = new Date();
     
-    // If appointment is in the past and was pending or confirmed, mark as completed
-    if (appointmentDate < now && (appointment.status === 'pending' || appointment.status === 'confirmed')) {
+    // If appointment is in the past and was scheduled or confirmed, mark as completed
+    if (appointmentDate < now && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       return 'completed';
     }
     
@@ -147,8 +147,8 @@ export default function PatientAppointments() {
 
   const getStatusBadge = (status) => {
     const statusColors = {
-      confirmed: 'bg-green-100 text-green-800',
-      pending: 'bg-blue-100 text-blue-800',
+      scheduled: 'bg-blue-100 text-blue-800',
+      confirmed: 'bg-gray-100 text-gray-800',
       cancelled: 'bg-red-100 text-red-800',
       completed: 'bg-green-100 text-green-700'
     };
@@ -289,7 +289,7 @@ export default function PatientAppointments() {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(getActualAppointmentStatus(appointment))}`}>
                         {toTitleCase(getActualAppointmentStatus(appointment))}
                       </span>
-                      {(appointment.status === 'confirmed' || appointment.status === 'pending') && 
+                      {appointment.status === 'scheduled' && 
                        new Date(appointment.date) > new Date() && (
                         <button
                           onClick={() => handleCancelAppointment(appointment._id)}
@@ -351,7 +351,7 @@ export default function PatientAppointments() {
       {/* Cancellation Reason Dialog */}
       {showReasonDialog && appointmentToCancel && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Reason for Cancellation
@@ -392,7 +392,7 @@ export default function PatientAppointments() {
 
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3 text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">

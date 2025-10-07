@@ -11,6 +11,22 @@ export default function MedicationsPage() {
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState(null);
   const [activeFilter, setActiveFilter] = useState("active");
+  const [showAddMedicationModal, setShowAddMedicationModal] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [medicationForm, setMedicationForm] = useState({
+    name: "",
+    dosage: "",
+    frequency: "",
+    startDate: "",
+    endDate: "",
+    instructions: "",
+    notes: "",
+    reminders: {
+      enabled: true,
+      times: ["08:00"]
+    }
+  });
 
   useEffect(() => {
     const fetchMedications = async () => {
@@ -21,91 +37,28 @@ export default function MedicationsPage() {
       }
 
       try {
-        // In a real app, this would be an API call to fetch medications
-        // For now, we'll simulate with mock data
-        setTimeout(() => {
-          const mockMedications = [
-            {
-              _id: "m1",
-              name: "Amoxicillin",
-              dosage: "500mg",
-              frequency: "Three times daily",
-              startDate: "2023-10-01",
-              endDate: "2023-10-14",
-              status: "active",
-              instructions:
-                "Take with food. Complete the full course even if you feel better.",
-              prescribedBy: "Dr. John Smith",
-              refillsRemaining: 0,
-              sideEffects: "May cause nausea, diarrhea, or rash.",
-            },
-            {
-              _id: "m2",
-              name: "Lisinopril",
-              dosage: "10mg",
-              frequency: "Once daily",
-              startDate: "2023-09-15",
-              endDate: "2024-03-15",
-              status: "active",
-              instructions:
-                "Take in the morning. Monitor blood pressure regularly.",
-              prescribedBy: "Dr. Sarah Johnson",
-              refillsRemaining: 5,
-              sideEffects: "May cause dizziness, headache, or dry cough.",
-            },
-            {
-              _id: "m3",
-              name: "Ibuprofen",
-              dosage: "400mg",
-              frequency: "As needed for pain",
-              startDate: "2023-08-20",
-              endDate: "2023-09-03",
-              status: "completed",
-              instructions: "Take with food. Do not exceed 1200mg in 24 hours.",
-              prescribedBy: "Dr. Michael Chen",
-              refillsRemaining: 0,
-              sideEffects: "May cause stomach upset, heartburn, or dizziness.",
-            },
-            {
-              _id: "m4",
-              name: "Atorvastatin",
-              dosage: "20mg",
-              frequency: "Once daily at bedtime",
-              startDate: "2023-07-10",
-              endDate: "2024-01-10",
-              status: "active",
-              instructions: "Take at bedtime. Avoid grapefruit juice.",
-              prescribedBy: "Dr. Emily Wilson",
-              refillsRemaining: 3,
-              sideEffects:
-                "May cause muscle pain, weakness, or liver problems.",
-            },
-            {
-              _id: "m5",
-              name: "Prednisone",
-              dosage: "10mg tapering dose",
-              frequency: "As directed",
-              startDate: "2023-06-15",
-              endDate: "2023-06-29",
-              status: "completed",
-              instructions: "Take with food. Follow tapering schedule exactly.",
-              prescribedBy: "Dr. Robert Lee",
-              refillsRemaining: 0,
-              sideEffects:
-                "May cause increased appetite, mood changes, or insomnia.",
-            },
-          ];
+        // Fetch real medications from API
+        const response = await fetch("http://localhost:5000/api/v1/medications/my", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-          setMedications(mockMedications);
-          setIsLoading(false);
-        }, 1000);
-
-        // Uncomment and use the following line to fetch real data once the backend is ready
-        // const data = await get("/api/v1/medications");
-        // setMedications(data.data || []);
-        // setIsLoading(false);
+        if (response.ok) {
+          const result = await response.json();
+          setMedications(result.data || []);
+        } else {
+          console.error("Failed to fetch medications");
+          // Fallback to empty array if API fails
+          setMedications([]);
+        }
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching medications:", error);
+        // Fallback to empty array if there's an error
+        setMedications([]);
         setIsLoading(false);
       }
     };
@@ -113,16 +66,35 @@ export default function MedicationsPage() {
     fetchMedications();
   }, [router]);
 
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value || "";
+    setSearchTerm(value);
+  };
+
+  // Filter medications based on search term and active filter
+  const filteredMedications = medications.filter((medication) => {
+    // First filter by status
+    const statusMatch = activeFilter === "all" || medication.status === activeFilter;
+    
+    // Then filter by search term
+    const search = (searchTerm || "").toLowerCase();
+    const searchMatch = !search || 
+      (medication.name && medication.name.toLowerCase().includes(search)) ||
+      (medication.dosage && medication.dosage.toLowerCase().includes(search)) ||
+      (medication.frequency && medication.frequency.toLowerCase().includes(search));
+    
+    return statusMatch && searchMatch;
+  });
+
+
+
   const handleViewMedication = (medication) => {
     setSelectedMedication(medication);
     setShowMedicationModal(true);
   };
 
-  // Filter medications based on active filter
-  const filteredMedications = medications.filter((medication) => {
-    if (activeFilter === "all") return true;
-    return medication.status === activeFilter;
-  });
+
 
   // Calculate days remaining for active medications
   const calculateDaysRemaining = (endDate) => {
@@ -142,14 +114,155 @@ export default function MedicationsPage() {
     return daysRemaining <= 7 && daysRemaining > 0;
   };
 
+  // Handle form input changes
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('reminders.')) {
+      const reminderField = name.split('.')[1];
+      setMedicationForm(prev => ({
+        ...prev,
+        reminders: {
+          ...prev.reminders,
+          [reminderField]: value
+        }
+      }));
+    } else {
+      setMedicationForm(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  // Handle reminder times
+  const handleReminderTimeChange = (index, value) => {
+    setMedicationForm(prev => ({
+      ...prev,
+      reminders: {
+        ...prev.reminders,
+        times: prev.reminders.times.map((time, i) => i === index ? value : time)
+      }
+    }));
+  };
+
+  // Add new reminder time
+  const addReminderTime = () => {
+    setMedicationForm(prev => ({
+      ...prev,
+      reminders: {
+        ...prev.reminders,
+        times: [...prev.reminders.times, "12:00"]
+      }
+    }));
+  };
+
+  // Remove reminder time
+  const removeReminderTime = (index) => {
+    if (medicationForm.reminders.times.length > 1) {
+      setMedicationForm(prev => ({
+        ...prev,
+        reminders: {
+          ...prev.reminders,
+          times: prev.reminders.times.filter((_, i) => i !== index)
+        }
+      }));
+    }
+  };
+
+  // Handle form submission
+  const handleAddMedication = async (e) => {
+    e.preventDefault();
+    
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/v1/medications/my", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(medicationForm),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Add the new medication to the list
+        setMedications(prev => [result.data, ...prev]);
+        
+        // Reset form and close modal
+        setMedicationForm({
+          name: "",
+          dosage: "",
+          frequency: "",
+          startDate: "",
+          endDate: "",
+          instructions: "",
+          notes: "",
+          reminders: {
+            enabled: true,
+            times: ["08:00"]
+          }
+        });
+        setShowAddMedicationModal(false);
+        
+        // Show success popup
+        setShowSuccessPopup(true);
+        
+        // Auto-hide success popup after 3 seconds
+        setTimeout(() => {
+          setShowSuccessPopup(false);
+        }, 3000);
+      } else {
+        const error = await response.json();
+        alert("Failed to add medication: " + error.error);
+      }
+    } catch (error) {
+      console.error("Error adding medication:", error);
+      alert("Error adding medication. Please try again.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">My Medications</h1>
-        <div className="relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </span>
+            <input
+              type="search"
+              value={searchTerm || ""}
+              onChange={handleSearchChange}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Search medications..."
+            />
+          </div>
+          <button
+            onClick={() => setShowAddMedicationModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
             <svg
-              className="w-5 h-5 text-gray-400"
+              className="w-5 h-5 mr-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -159,15 +272,11 @@ export default function MedicationsPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               ></path>
             </svg>
-          </span>
-          <input
-            type="search"
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Search medications..."
-          />
+            Add Medication
+          </button>
         </div>
       </div>
 
@@ -253,8 +362,8 @@ export default function MedicationsPage() {
               filteredMedications.map((medication) => (
                 <tr
                   key={medication._id}
-                  className={`hover:bg-gray-50 ${
-                    needsRefillSoon(medication) ? "bg-yellow-50" : ""
+                  className={`hover:bg-gray-50 transition-colors ${
+                    needsRefillSoon(medication) ? "bg-yellow-50" : "bg-white"
                   }`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -262,7 +371,9 @@ export default function MedicationsPage() {
                       {medication.name}
                     </div>
                     <div className="text-sm text-gray-500">
-                      Prescribed by {medication.prescribedBy}
+                      {medication.prescribedBy ? `Prescribed by ${medication.prescribedBy}` : 
+                       medication.doctor ? `Dr. ${medication.doctor.firstName} ${medication.doctor.lastName}` : 
+                       'Self-managed'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -272,11 +383,11 @@ export default function MedicationsPage() {
                     {medication.frequency}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(medication.startDate).toLocaleDateString()}
+                    {medication.startDate ? new Date(medication.startDate).toLocaleDateString() : 'Not set'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(medication.endDate).toLocaleDateString()}
-                    {medication.status === "active" && (
+                    {medication.endDate ? new Date(medication.endDate).toLocaleDateString() : 'Ongoing'}
+                    {medication.status === "active" && medication.endDate && (
                       <div className="text-xs text-blue-600">
                         {calculateDaysRemaining(medication.endDate)} days
                         remaining
@@ -487,6 +598,248 @@ export default function MedicationsPage() {
                   </button>
                 )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Medication Modal */}
+      {showAddMedicationModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full m-4 max-h-screen overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Add New Medication</h3>
+                <button
+                  onClick={() => setShowAddMedicationModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddMedication} className="px-6 py-4 space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Medication Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    value={medicationForm.name}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Aspirin"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="dosage" className="block text-sm font-medium text-gray-700 mb-2">
+                    Dosage *
+                  </label>
+                  <input
+                    type="text"
+                    id="dosage"
+                    name="dosage"
+                    required
+                    value={medicationForm.dosage}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., 100mg"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
+                    Frequency *
+                  </label>
+                  <select
+                    id="frequency"
+                    name="frequency"
+                    required
+                    value={medicationForm.frequency}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select frequency</option>
+                    <option value="Once daily">Once daily</option>
+                    <option value="Twice daily">Twice daily</option>
+                    <option value="Three times daily">Three times daily</option>
+                    <option value="Four times daily">Four times daily</option>
+                    <option value="Every other day">Every other day</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="As needed">As needed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    id="startDate"
+                    name="startDate"
+                    value={medicationForm.startDate}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    id="endDate"
+                    name="endDate"
+                    value={medicationForm.endDate}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
+                  Instructions
+                </label>
+                <textarea
+                  id="instructions"
+                  name="instructions"
+                  rows={3}
+                  value={medicationForm.instructions}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Take with food, after meals..."
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                  Personal Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={2}
+                  value={medicationForm.notes}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Any personal notes about this medication..."
+                />
+              </div>
+
+              {/* Reminders */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Medication Reminders
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={medicationForm.reminders.enabled}
+                      onChange={(e) => setMedicationForm(prev => ({
+                        ...prev,
+                        reminders: {
+                          ...prev.reminders,
+                          enabled: e.target.checked
+                        }
+                      }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Enable reminders</span>
+                  </label>
+                </div>
+
+                {medicationForm.reminders.enabled && (
+                  <div className="space-y-2">
+                    <label className="block text-sm text-gray-600 mb-2">Reminder Times:</label>
+                    {medicationForm.reminders.times.map((time, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <input
+                          type="time"
+                          value={time}
+                          onChange={(e) => handleReminderTimeChange(index, e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        {medicationForm.reminders.times.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeReminderTime(index)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addReminderTime}
+                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add another time
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowAddMedicationModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Add Medication
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <div>
+              <p className="font-medium">Medication Added Successfully!</p>
+              <p className="text-sm text-green-100">Your medication has been added to your list.</p>
+            </div>
+            <button
+              onClick={() => setShowSuccessPopup(false)}
+              className="text-green-100 hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}

@@ -221,6 +221,18 @@ export const appointmentApi = {
       body: JSON.stringify(appointmentData),
     }),
 
+  // Confirm appointment (for doctors)
+  confirmAppointment: (id) =>
+    apiRequest(`/appointments/${id}/confirm`, {
+      method: "PUT",
+    }),
+
+  // Update expired appointments to completed status (admin only)
+  updateExpiredAppointments: () =>
+    apiRequest("/appointments/update-status", {
+      method: "PUT",
+    }),
+
   // Doctor-specific functions
   updateAppointmentStatus: (id, status) =>
     apiRequest(`/appointments/${id}/status`, {

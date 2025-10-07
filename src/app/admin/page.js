@@ -23,6 +23,15 @@ export default function AdminDashboard() {
       setLoading(true);
       setError(null);
       
+      // Get auth token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        setError('Authentication required');
+        setLoading(false);
+        return;
+      }
+      
       // Test backend connection first
       console.log('Attempting to connect to backend at:', API_BASE_URL);
       
@@ -42,6 +51,7 @@ export default function AdminDashboard() {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
               },
             });
             

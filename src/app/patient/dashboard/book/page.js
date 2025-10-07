@@ -19,17 +19,41 @@ export default function PatientBookPage() {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
 
+  // Auto-clear success messages after 5 seconds
+  useEffect(() => {
+    if (message.type === "success" && message.text) {
+      const timer = setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    // Clear any previous messages when user changes form data
+    if (message.text) {
+      setMessage({ type: "", text: "" });
+    }
+  };
+
+  const goBackToForm = () => {
+    setStep(1);
+    setMessage({ type: "", text: "" }); // Clear any messages when going back
+    setAvailableDoctors([]);
+    setSelectedDoctor(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Clear any previous messages
+    setMessage({ type: "", text: "" });
     
     // Basic validation
     if (!formData.reason.trim() || !formData.preferredDate || !formData.preferredTime || !formData.specialization) {
@@ -291,7 +315,7 @@ export default function PatientBookPage() {
           <div className="mb-6 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Available Doctors</h2>
             <button 
-              onClick={() => setStep(1)} 
+              onClick={goBackToForm} 
               className="text-blue-600 hover:text-blue-800 flex items-center"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -319,7 +343,7 @@ export default function PatientBookPage() {
               <h3 className="mt-4 text-lg font-medium text-gray-900">No doctors available</h3>
               <p className="mt-2 text-gray-500">Try selecting a different date, time, or specialization.</p>
               <button 
-                onClick={() => setStep(1)} 
+                onClick={goBackToForm} 
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Change Criteria

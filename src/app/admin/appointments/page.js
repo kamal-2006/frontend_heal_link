@@ -73,6 +73,8 @@ export default function AppointmentManagement() {
     switch (status) {
       case 'confirmed':
         return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -640,16 +642,7 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">

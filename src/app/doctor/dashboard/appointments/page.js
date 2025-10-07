@@ -363,6 +363,16 @@ export default function DoctorAppointments() {
                       >
                         View
                       </button>
+                      {appointment.status === "pending" && (
+                        <button
+                          onClick={() =>
+                            handleStatusChange(appointment.id, "cancelled")
+                          }
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -433,177 +443,145 @@ export default function DoctorAppointments() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date and Time
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={rescheduleData.date}
-                      onChange={(e) =>
-                        setRescheduleData({
-                          ...rescheduleData,
-                          date: e.target.value,
-                        })
-                      }
-                      required
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Assigned Doctor
-                    </label>
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
-                        {rescheduleData.doctorName}
+                  {isRescheduleMode ? (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Reschedule Appointment
+                      </h3>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date and Time
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={rescheduleData.date}
+                          onChange={(e) =>
+                            setRescheduleData({
+                              ...rescheduleData,
+                              date: e.target.value,
+                            })
+                          }
+                          required
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleChangeDoctorClick}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                      >
-                        Change Doctor
-                      </button>
-                    </div>
-                  </div>
 
-                  {isChangingDoctor && (
-                    <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">
-                        Select New Doctor:
-                      </h4>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {availableDoctors.map((doctor) => (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Assigned Doctor
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                            {rescheduleData.doctorName}
+                          </div>
                           <button
-                            key={doctor._id}
-                            onClick={() => handleDoctorSelect(doctor)}
-                            className="w-full text-left px-3 py-2 border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                            type="button"
+                            onClick={handleChangeDoctorClick}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
                           >
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">
-                                Dr. {doctor.user.firstName}{" "}
-                                {doctor.user.lastName}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {doctor.specialization}
-                              </span>
-                            </div>
+                            Change Doctor
                           </button>
-                        ))}
+                        </div>
                       </div>
-                      <button
-                        onClick={() => setIsChangingDoctor(false)}
-                        className="mt-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
 
-                  <div className="border-t border-gray-200 pt-4 flex justify-end space-x-3">
-                    <button
-                      onClick={handleCancelReschedule}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleRescheduleSubmit}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
+                      {isChangingDoctor && (
+                        <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">
+                            Select New Doctor:
+                          </h4>
+                          <div className="max-h-40 overflow-y-auto space-y-2">
+                            {availableDoctors.map((doctor) => (
+                              <button
+                                key={doctor._id}
+                                onClick={() => handleDoctorSelect(doctor)}
+                                className="w-full text-left px-3 py-2 border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium">
+                                    Dr. {doctor.user.firstName}{" "}
+                                    {doctor.user.lastName}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    {doctor.specialization}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setIsChangingDoctor(false)}
+                            className="mt-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="border-t border-gray-200 pt-4 flex justify-end space-x-3">
+                        <button
+                          onClick={handleCancelReschedule}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleRescheduleSubmit}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Notes
+                        </h4>
+                        <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
+                          {selectedAppointment.notes}
+                        </p>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 flex justify-end space-x-4">
+                        <button
+                          onClick={handleCloseModal}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                        >
+                          Close
+                        </button>
+
+                        {selectedAppointment.status === "pending" && (
+                          <button
+                            onClick={() =>
+                              handleStatusChange(selectedAppointment.id, "confirmed")
+                            }
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+                          >
+                            Confirm Appointment
+                          </button>
+                        )}
+                        
+                        {(selectedAppointment.status === "pending" || selectedAppointment.status === "confirmed") && (
+                          <button
+                            onClick={() =>
+                              handleStatusChange(selectedAppointment.id, "completed")
+                            }
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
+                          >
+                            Mark as Completed
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Patient Name
-                      </h4>
-                      <p className="text-gray-900">
-                        {selectedAppointment.patientName}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Patient ID
-                      </h4>
-                      <p className="text-gray-900">
-                        {selectedAppointment.patientId}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Date
-                      </h4>
-                      <p className="text-gray-900">
-                        {new Date(
-                          selectedAppointment.date
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Time
-                      </h4>
-                      <p className="text-gray-900">
-                        {selectedAppointment.time}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Type
-                      </h4>
-                      <p className="text-gray-900">
-                        {selectedAppointment.type}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">
-                        Contact
-                      </h4>
-                      <p className="text-gray-900">
-                        {selectedAppointment.contact}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">
-                      Notes
-                    </h4>
-                    <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
-                      {selectedAppointment.notes}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-4 flex justify-end space-x-3">
-                    {(selectedAppointment.status === "upcoming" ||
-                      selectedAppointment.status === "confirmed") && (
-                      <>
-                        <button
-                          onClick={() =>
-                            handleCancelAppointment(selectedAppointment.id)
-                          }
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150"
-                        >
-                          Cancel Appointment
-                        </button>
-                        <button
-                          onClick={() => handleReschedule(selectedAppointment)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
-                        >
-                          Reschedule
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </>
+                <div>
+                  {/* Normal view content would go here */}
+                </div>
               )}
             </div>
           </div>
