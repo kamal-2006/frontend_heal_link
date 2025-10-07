@@ -14,12 +14,15 @@ export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showReasonDialog, setShowReasonDialog] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,15 +37,28 @@ export default function PatientDashboard() {
       try {
         // Fetch patient-specific data
         const { appointmentApi, medicationApi } = await import('../../../utils/api');
-        const [appointmentsRes, medicationsRes, dashboardRes] = await Promise.all([
+        const [appointmentsRes, medicationsRes, notificationsRes, dashboardRes] = await Promise.all([
           appointmentApi.getMyAppointments().catch(() => ({ data: [] })),
           medicationApi.getMyActiveMedications().catch(() => ({ data: [] })),
-          patientApi.getDashboard().catch(() => ({ data: null }))
+          fetch('http://localhost:5000/api/v1/notifications/patient', {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(res => res.json()).catch(() => ({ data: [] })),
+          patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' }))
         ]);
 
-        setAppointments(appointmentsRes.data || []);
-        setPrescriptions(medicationsRes.data || []);
-        setDashboardData(dashboardRes.data);
+        setAppointments(appointmentsRes?.data || []);
+        setPrescriptions(medicationsRes?.data || []);
+        setNotifications(notificationsRes?.data || []);
+
+        // dashboardRes may be { data: null, error, status } when patient not found
+        if (dashboardRes && typeof dashboardRes === 'object') {
+          setDashboardData(dashboardRes.data ?? null);
+          if (dashboardRes.error) {
+            console.warn('Patient dashboard error:', dashboardRes.error);
+          }
+        } else {
+          setDashboardData(null);
+        }
 
         // Mock reports data for now
         setReports([
@@ -63,6 +79,16 @@ export default function PatientDashboard() {
   const handleCancelAppointment = async (appointmentId) => {
     const appointment = appointments.find(apt => apt._id === appointmentId);
     setAppointmentToCancel(appointment);
+    setCancellationReason('');
+    setShowReasonDialog(true);
+  };
+
+  const proceedWithCancellation = () => {
+    if (!cancellationReason.trim()) {
+      alert('Please provide a reason for cancellation');
+      return;
+    }
+    setShowReasonDialog(false);
     setShowConfirmDialog(true);
   };
 
@@ -74,7 +100,9 @@ export default function PatientDashboard() {
       setMessage({ type: '', text: '' });
       setShowConfirmDialog(false);
       
-      const result = await appointmentApi.cancelAppointment(appointmentToCancel._id);
+      const result = await appointmentApi.cancelAppointment(appointmentToCancel._id, {
+        reason: cancellationReason.trim()
+      });
       
       setMessage({ 
         type: 'success', 
@@ -98,7 +126,23 @@ export default function PatientDashboard() {
 
   const cancelCancellation = () => {
     setShowConfirmDialog(false);
+    setShowReasonDialog(false);
     setAppointmentToCancel(null);
+    setCancellationReason('');
+  };
+
+  // Helper function to get the actual status of an appointment based on current time
+  const getActualAppointmentStatus = (appointment) => {
+    const appointmentDate = new Date(appointment.date);
+    const now = new Date();
+    
+    // If appointment is in the past and was pending or confirmed, mark as completed
+    if (appointmentDate < now && (appointment.status === 'pending' || appointment.status === 'confirmed')) {
+      return 'completed';
+    }
+    
+    // Otherwise, return the original status
+    return appointment.status;
   };
 
   // Get upcoming appointments (max 3) - latest booked first
@@ -106,7 +150,10 @@ export default function PatientDashboard() {
     .filter(app => {
       const appointmentDate = new Date(app.date);
       const now = new Date();
-      return (app.status === 'pending' || app.status === 'confirmed') && appointmentDate >= now;
+      const actualStatus = getActualAppointmentStatus(app);
+      
+      // Only show future appointments that are pending or confirmed
+      return (actualStatus === 'pending' || actualStatus === 'confirmed') && appointmentDate >= now;
     })
     .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
     .slice(0, 3);
@@ -118,7 +165,7 @@ export default function PatientDashboard() {
   const unreadReportsCount = reports.filter(report => report.status === 'New').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
@@ -155,23 +202,23 @@ export default function PatientDashboard() {
       )}
       
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <>
           {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* New Appointment Card */}
         <Link href="/patient/dashboard/book" className="block group">
-          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Book Appointment</h3>
                 <p className="text-blue-700 text-sm leading-relaxed">Schedule your next visit</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
@@ -189,14 +236,14 @@ export default function PatientDashboard() {
 
         {/* Reports Card */}
         <Link href="/patient/reports" className="block group">
-          <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medical Reports</h3>
                 <p className="text-purple-700 text-sm leading-relaxed">Lab results & documents</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-purple-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
@@ -217,14 +264,14 @@ export default function PatientDashboard() {
 
         {/* Current Medications Card */}
         <Link href="/patient/medications" className="block group">
-          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Medications</h3>
                 <p className="text-green-700 text-sm leading-relaxed">Active prescriptions</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-green-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-green-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
@@ -245,14 +292,14 @@ export default function PatientDashboard() {
 
         {/* Upcoming Appointments Card */}
         <Link href="/patient/appointments" className="block group">
-          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 shadow-sm p-6 hover:shadow-md transition-all duration-300 h-full min-h-[140px] flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
+          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 shadow-sm p-4 hover:shadow-md transition-all duration-300 h-full min-h-[120px] flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold mb-2 leading-tight text-gray-900">Appointments</h3>
                 <p className="text-amber-700 text-sm leading-relaxed">Scheduled visits</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm ml-3 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-10 w-10 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm ml-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -272,7 +319,36 @@ export default function PatientDashboard() {
         </Link>
       </div>
 
-
+      {/* Notifications Section */}
+      {notifications && notifications.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
+            <h3 className="text-lg font-medium text-gray-900">Recent Notifications</h3>
+          </div>
+          <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+            {notifications.slice(0, 5).map((notification, index) => (
+              <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start space-x-3">
+                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
+                    notification.type === 'appointment_rescheduled' ? 'bg-orange-500' :
+                    notification.type === 'appointment_confirmed' ? 'bg-green-500' :
+                    'bg-blue-500'
+                  }`}></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(notification.createdAt || new Date()).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Appointments Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
@@ -312,13 +388,19 @@ export default function PatientDashboard() {
                       </p>
                     </div>
                     <span className={`px-3 py-1 text-xs rounded-full font-medium ${
-                      appointment.status === 'confirmed' 
-                        ? 'bg-green-100 text-green-800' 
+                      getActualAppointmentStatus(appointment) === 'confirmed' 
+                        ? 'bg-green-100 text-green-800'
+                        : getActualAppointmentStatus(appointment) === 'completed'
+                        ? 'bg-gray-100 text-gray-700'
                         : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {appointment.status === 'confirmed' ? 'Confirmed' : 'Scheduled'}
+                      {getActualAppointmentStatus(appointment) === 'confirmed' 
+                        ? 'Confirmed' 
+                        : getActualAppointmentStatus(appointment) === 'completed'
+                        ? 'Completed'
+                        : 'Scheduled'}
                     </span>
-                    {(appointment.status === 'confirmed' || appointment.status === 'pending') && 
+                    {(getActualAppointmentStatus(appointment) === 'confirmed' || getActualAppointmentStatus(appointment) === 'pending') && 
                      new Date(appointment.date) > new Date() && (
                       <button
                         onClick={() => handleCancelAppointment(appointment._id)}
@@ -391,6 +473,48 @@ export default function PatientDashboard() {
         </div>
       </div>
         </>
+      )}
+
+      {/* Cancellation Reason Dialog */}
+      {showReasonDialog && appointmentToCancel && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Reason for Cancellation
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Please provide a reason for cancelling your appointment with Dr. {appointmentToCancel.doctor?.firstName} {appointmentToCancel.doctor?.lastName} on {new Date(appointmentToCancel.date).toLocaleDateString()}.
+              </p>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Enter your reason for cancellation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={4}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {cancellationReason.length}/500 characters
+              </p>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={cancelCancellation}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={proceedWithCancellation}
+                  disabled={!cancellationReason.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Dialog */}

@@ -3,15 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { post } from "@/utils/api";
+import { authApi } from "@/utils/api";
 
 export default function Signup() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
-    phone: "",
+    email: "",    phone: "",
     password: "",
     confirmPassword: "",
     terms: false
@@ -47,7 +46,7 @@ export default function Signup() {
     setError('');
     
     try {
-      const res = await post("/auth/register", {
+      const res = await authApi.register({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -56,14 +55,14 @@ export default function Signup() {
         password: formData.password
       });
       
-      if (res.ok) {
+      if (res.success) {
         router.push('/login');
       } else {
         setError(res.error || "Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
-      setError("An error occurred during registration.");
+      setError(error.message || "An error occurred during registration.");
     } finally {
       setIsLoading(false);
     }
