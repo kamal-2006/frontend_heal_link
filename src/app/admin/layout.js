@@ -97,7 +97,7 @@ export default function AdminLayout({ children }) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -284,11 +284,19 @@ export default function AdminLayout({ children }) {
         <main
           className={`transition-all duration-300 ${
             isCollapsed ? "ml-20" : "ml-64"
-          } p-6 w-full`}
+          } min-w-0 flex-1 overflow-hidden`}
         >
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            {children}
-          </div>
+          {pathname === '/admin/appointments' ? (
+            // Full width container with overflow control for appointments page
+            <div className="p-4 min-w-0 overflow-hidden">
+              {children}
+            </div>
+          ) : (
+            // Standard container with overflow control for other pages
+            <div className="bg-white rounded-lg shadow-sm p-6 m-6 min-w-0 overflow-hidden">
+              {children}
+            </div>
+          )}
         </main>
       </div>
     </div>

@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { patientApi, appointmentApi } from "@/utils/api";
+import useUser from "../../../../../hooks/useUser";
 
 export default function NewAppointment() {
   const router = useRouter();
+  const { user } = useUser();
   const [formData, setFormData] = useState({
-    patient: '',
-    date: '',
-    status: 'pending',
+    patient: "",
+    date: "",
+    reason: "",
   });
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -16,31 +19,22 @@ export default function NewAppointment() {
 
   useEffect(() => {
     const fetchPatients = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const res = await fetch('http://localhost:5000/api/v1/patients', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
+        const data = await patientApi.getPatients();
+        if (data.success) {
           setPatients(data.data || []);
         } else {
-          console.error('Failed to fetch patients');
+          console.error("Failed to fetch patients");
         }
       } catch (error) {
-        console.error('Error fetching patients:', error);
+        console.error("Error fetching patients:", error);
       } finally {
         setIsFetchingPatients(false);
       }
     };
 
     fetchPatients();
-  }, [router]);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -53,29 +47,36 @@ export default function NewAppointment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    const token = localStorage.getItem('token');
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      console.log("Submitting appointment data:", formData);
+      console.log("Current user:", user);
 
-      const data = await res.json();
+      // Create appointment with the correct patient and doctor IDs
+      const appointmentData = {
+        patient: formData.patient, // This is the patient's user ID
+        date: formData.date,
+        reason: formData.reason || "General consultation",
+        // Note: Doctor bookings are automatically confirmed by backend
+      };
 
-      if (res.ok) {
-        alert('Appointment created successfully!');
-        router.push('/doctor/dashboard/appointments');
+      console.log("Sending appointment data:", appointmentData);
+
+      const response = await appointmentApi.bookAppointment(appointmentData);
+
+      console.log("Appointment response:", response);
+
+      if (response.success) {
+        alert("Appointment created successfully!");
+        router.push("/doctor/dashboard/appointments");
       } else {
-        alert(data.error || 'Something went wrong');
+        alert(response.error || "Something went wrong");
       }
     } catch (error) {
-      console.error('Error creating appointment:', error);
-      alert('An error occurred while creating the appointment.');
+      console.error("Error creating appointment:", error);
+      alert(
+        error.message || "An error occurred while creating the appointment."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +88,10 @@ export default function NewAppointment() {
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="patient" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="patient"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Patient
             </label>
             {isFetchingPatients ? (
@@ -101,17 +105,42 @@ export default function NewAppointment() {
                 required
                 className="w-full pl-3 pr-8 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               >
-                <option value="" disabled>Select a patient</option>
-                {patients.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.firstName} {p.lastName}
+                <option value="" disabled>
+                  Select a patient
+                </option>
+                {patients.map((patient) => (
+                  <option key={patient._id} value={patient.user._id}>
+                    {patient.user.firstName} {patient.user.lastName} -{" "}
+                    {patient.user.email}
                   </option>
                 ))}
               </select>
             )}
           </div>
+
           <div>
-            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="reason"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Reason for Visit
+            </label>
+            <textarea
+              id="reason"
+              name="reason"
+              value={formData.reason}
+              onChange={handleInputChange}
+              rows={3}
+              placeholder="Enter reason for appointment"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="date"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Date and Time
             </label>
             <input
@@ -121,33 +150,18 @@ export default function NewAppointment() {
               value={formData.date}
               onChange={handleInputChange}
               required
+              min={new Date().toISOString().slice(0, 16)} // Prevent past dates
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
           </div>
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              required
-              className="w-full pl-3 pr-8 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-            >
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
+
           <div>
             <button
               type="submit"
               disabled={isLoading || isFetchingPatients}
               className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
             >
-              {isLoading ? 'Creating...' : 'Create Appointment'}
+              {isLoading ? "Creating..." : "Create Appointment"}
             </button>
           </div>
         </form>

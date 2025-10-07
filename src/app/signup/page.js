@@ -10,8 +10,7 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
-    phone: "",
+    email: "",    phone: "",
     password: "",
     confirmPassword: "",
     terms: false

@@ -100,7 +100,10 @@ export default function PatientManagement() {
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <div className="text-xl text-gray-600">Loading patients from database...</div>
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading patients from database...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -150,39 +153,6 @@ export default function PatientManagement() {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Patients</h3>
-              <p className="text-3xl font-bold text-indigo-600">{patients.length}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Patients</h3>
-              <p className="text-3xl font-bold text-green-600">
-                {patients.filter(p => p.user).length}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">New This Month</h3>
-              <p className="text-3xl font-bold text-blue-600">
-                {patients.filter(p => {
-                  const createdDate = new Date(p.createdAt);
-                  const currentDate = new Date();
-                  return createdDate.getMonth() === currentDate.getMonth() && 
-                         createdDate.getFullYear() === currentDate.getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Appointments Today</h3>
-              <p className="text-3xl font-bold text-purple-600">
-                {patients.reduce((total, patient) => {
-                  return total + (patient.stats?.appointmentsToday || 0);
-                }, 0)}
-              </p>
-            </div>
-          </div>
-
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1">
@@ -210,29 +180,23 @@ export default function PatientManagement() {
 
         {/* Patients Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-hidden">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">
                     Patient
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                     Age
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Visit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Doctor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
                     Actions
                   </th>
                 </tr>
@@ -240,7 +204,7 @@ export default function PatientManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center">
                         <svg className="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -256,10 +220,23 @@ export default function PatientManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-indigo-600">
-                                {patient.user?.firstName?.charAt(0) || patient.name?.charAt(0) || 'P'}
-                              </span>
+                            <div className="h-10 w-10 rounded-full overflow-hidden">
+                              {patient.user?.profilePicture ? (
+                                <img 
+                                  src={patient.user.profilePicture} 
+                                  alt={`${patient.user.firstName} ${patient.user.lastName}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center ${patient.user?.profilePicture ? 'hidden' : ''}`}>
+                                <span className="text-sm font-medium text-indigo-600">
+                                  {patient.user?.firstName?.charAt(0) || patient.name?.charAt(0) || 'P'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <div className="ml-4">
@@ -285,12 +262,6 @@ export default function PatientManagement() {
                         }`}>
                           {patient.user ? 'Active' : 'Inactive'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(patient.lastAppointment)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {patient.lastVisitDoctor || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button 

@@ -2,11 +2,30 @@
 
 import { useState, useEffect } from 'react';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+// Add custom styles for animations
+const styles = `
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+`;
+
 export default function DoctorManagement() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -51,15 +70,43 @@ export default function DoctorManagement() {
     'Endocrinology'
   ];
 
+  // Toast notification functions
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000); // 3 seconds for perfect timing
+  };
+
+  const showConfirmDialog = (title, message, onConfirm) => {
+    setConfirmDialog({ show: true, title, message, onConfirm });
+  };
+
+  const hideConfirmDialog = () => {
+    setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+  };
+
   // Fetch doctors from backend API (only database doctors, no defaults)
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      setError(null);
       
-      const response = await fetch('http://localhost:5000/api/v1/doctors');
+      // Add timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_BASE_URL}/doctors`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
+        if (response.status >= 500) {
+          throw new Error(`Server error (${response.status}): The backend server may be experiencing issues`);
+        } else if (response.status >= 400) {
+          throw new Error(`Request error (${response.status}): ${response.statusText}`);
+        }
         throw new Error(`Failed to fetch doctors: ${response.status} ${response.statusText}`);
       }
       
@@ -72,10 +119,22 @@ export default function DoctorManagement() {
       } else {
         setDoctors([]);
         console.warn('No valid doctor data received from API');
+        showToast('No doctors found in database', 'info');
       }
     } catch (err) {
       console.error('Error fetching doctors:', err);
-      setError('Failed to load doctors from database. Please check if the server is running.');
+      
+      let errorMessage = 'Failed to load doctors from database.';
+      
+      if (err.name === 'AbortError') {
+        errorMessage = 'Request timed out. Please check if the backend server is running.';
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend server is running on port 5000.';
+      } else {
+        errorMessage = err.message || 'Unknown error occurred while fetching doctors.';
+      }
+      
+      showToast(errorMessage, 'error');
       setDoctors([]); // Ensure empty array on error
     } finally {
       setLoading(false);
@@ -138,7 +197,7 @@ export default function DoctorManagement() {
       console.log('Submitting doctor form with data:', formData);
       
       // Send data directly to backend API without authentication
-      const response = await fetch('http://localhost:5000/api/v1/doctors', {
+      const response = await fetch(`${API_BASE_URL}/doctors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,15 +213,12 @@ export default function DoctorManagement() {
       
       console.log('Doctor added successfully:', result);
       
-      // Show success message with default password info
+      // Show success toast with default password info
       if (result.defaultPassword) {
-        setSuccessMessage(`Doctor added successfully! Default password: ${result.defaultPassword} (Please share this with the doctor)`);
+        showToast(`Doctor added successfully! Default password: ${result.defaultPassword} (Please share this with the doctor)`, 'success');
       } else {
-        setSuccessMessage('Doctor added successfully!');
+        showToast('Doctor added successfully!', 'success');
       }
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 5000); // Show for 5 seconds for password info
       
       // Reset form and close modal
       setFormData({
@@ -178,14 +234,21 @@ export default function DoctorManagement() {
       });
       setFormErrors({});
       setIsAddModalOpen(false);
-      setError(null);
       
       // Refresh the doctor list
       fetchDoctors();
       
     } catch (error) {
       console.error('Error adding doctor:', error);
-      setError(error.message || 'Failed to add doctor. Please try again.');
+      
+      let errorMessage = 'Failed to add doctor';
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend server is running.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -292,7 +355,7 @@ export default function DoctorManagement() {
     try {
       setLoading(true);
       
-      const response = await fetch(`http://localhost:5000/api/v1/doctors/${doctorId}`, {
+      const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -306,8 +369,7 @@ export default function DoctorManagement() {
         throw new Error(result.error || 'Failed to update doctor');
       }
 
-      setSuccessMessage('Doctor updated successfully!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showToast('Doctor updated successfully!', 'info');
       
       // Close modals and refresh
       setIsDetailsModalOpen(false);
@@ -317,8 +379,15 @@ export default function DoctorManagement() {
 
     } catch (error) {
       console.error('Error updating doctor:', error);
-      setError(error.message || 'Failed to update doctor');
-      setTimeout(() => setError(null), 3000);
+      
+      let errorMessage = 'Failed to update doctor';
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend server is running.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -326,14 +395,23 @@ export default function DoctorManagement() {
 
   // Handle delete doctor
   const handleDeleteDoctor = async (doctorId) => {
-    if (!window.confirm('Are you sure you want to delete this doctor? This action cannot be undone.')) {
-      return;
-    }
+    const confirmDelete = () => {
+      performDelete(doctorId);
+      hideConfirmDialog();
+    };
 
+    showConfirmDialog(
+      'Delete Doctor',
+      'Are you sure you want to delete this doctor? This action cannot be undone.',
+      confirmDelete
+    );
+  };
+
+  const performDelete = async (doctorId) => {
     try {
       setLoading(true);
       
-      const response = await fetch(`http://localhost:5000/api/v1/doctors/${doctorId}`, {
+      const response = await fetch(`${API_BASE_URL}/doctors/${doctorId}`, {
         method: 'DELETE'
       });
 
@@ -343,8 +421,7 @@ export default function DoctorManagement() {
         throw new Error(result.error || 'Failed to delete doctor');
       }
 
-      setSuccessMessage('Doctor deleted successfully!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showToast('Doctor deleted successfully!', 'error');
       
       // Close modal and refresh
       setIsDetailsModalOpen(false);
@@ -352,8 +429,15 @@ export default function DoctorManagement() {
 
     } catch (error) {
       console.error('Error deleting doctor:', error);
-      setError(error.message || 'Failed to delete doctor');
-      setTimeout(() => setError(null), 3000);
+      
+      let errorMessage = 'Failed to delete doctor';
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend server is running.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -378,6 +462,7 @@ export default function DoctorManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <style jsx>{styles}</style>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -412,17 +497,65 @@ export default function DoctorManagement() {
           </div>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-            {successMessage}
+        {/* Professional Toast Notification */}
+        {toast.show && (
+          <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+            <div className={`px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 ${
+              toast.type === 'success' ? 'bg-green-500 text-white' :
+              toast.type === 'info' ? 'bg-blue-500 text-white' :
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              'bg-gray-500 text-white'
+            }`}>
+              <div className="flex-shrink-0">
+                {toast.type === 'success' && (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {toast.type === 'info' && (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {toast.type === 'error' && (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <span className="font-medium">{toast.message}</span>
+            </div>
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
+        {/* Professional Confirmation Dialog */}
+        {confirmDialog.show && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-4">
+                  <svg className="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{confirmDialog.title}</h3>
+                <p className="text-gray-600 mb-6">{confirmDialog.message}</p>
+                <div className="flex space-x-3 justify-center">
+                  <button
+                    onClick={hideConfirmDialog}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    No, cancel it!
+                  </button>
+                  <button
+                    onClick={confirmDialog.onConfirm}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Yes, delete it!
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -454,14 +587,36 @@ export default function DoctorManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    Loading doctors...
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-3 text-gray-500">Loading doctors from database...</span>
+                    </div>
                   </td>
                 </tr>
               ) : filteredDoctors.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    No doctors found
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="text-gray-500">
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4M14 40H4v-4a6 6 0 0110.712-3.714M14 40v-4m0 0V24a6 6 0 1112 0v12m-6-16a4 4 0 100-8 4 4 0 000 8z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="mb-2">No doctors found</div>
+                      <div className="text-sm text-gray-400 mb-4">
+                        {doctors.length === 0 ? 'There are no doctors in the database or server may be unavailable.' : 'No doctors match your search criteria.'}
+                      </div>
+                      {doctors.length === 0 && (
+                        <button
+                          onClick={fetchDoctors}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Retry Loading
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -472,7 +627,7 @@ export default function DoctorManagement() {
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
                             {doctor.user ? 
-                              `${doctor.user.firstName[0]}${doctor.user.lastName[0]}` : 
+                              `${doctor.user.firstName[0].toUpperCase()}${doctor.user.lastName[0].toUpperCase()}` : 
                               'D'
                             }
                           </div>
