@@ -319,27 +319,34 @@ export const reportsApi = {
   // Upload medical report with files
   uploadReport: (formData) => {
     // For file uploads, we need to use fetch directly with FormData
-    const token = localStorage.getItem('token');
-    return fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"}/records/patient/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    }).then(response => response.json());
+    const token = localStorage.getItem("token");
+    return fetch(
+      `${
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+      }/records/patient/upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    ).then((response) => response.json());
   },
 
   // Get patient's own medical records
   getMyReports: (params = {}) => {
     const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append('page', params.page);
-    if (params.limit) queryParams.append('limit', params.limit);
-    if (params.recordType) queryParams.append('recordType', params.recordType);
-    if (params.startDate) queryParams.append('startDate', params.startDate);
-    if (params.endDate) queryParams.append('endDate', params.endDate);
-    
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+    if (params.recordType) queryParams.append("recordType", params.recordType);
+    if (params.startDate) queryParams.append("startDate", params.startDate);
+    if (params.endDate) queryParams.append("endDate", params.endDate);
+
     const queryString = queryParams.toString();
-    return apiRequest(`/records/patient/my-records${queryString ? `?${queryString}` : ''}`);
+    return apiRequest(
+      `/records/patient/my-records${queryString ? `?${queryString}` : ""}`
+    );
   },
 
   // Update medical record
@@ -360,13 +367,18 @@ export const reportsApi = {
 
   // Download medical record file
   downloadReport: (id) => {
-    const token = localStorage.getItem('token');
-    return fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"}/records/${id}/download`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+    const token = localStorage.getItem("token");
+    return fetch(
+      `${
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+      }/records/${id}/download`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-    });
-  }
+    );
+  },
 };
 
 export default apiRequest;
