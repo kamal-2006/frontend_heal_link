@@ -443,7 +443,7 @@ export default function DoctorAppointments() {
                     </div>
                   </div>
 
-                  {isRescheduling ? (
+                  {isRescheduleMode ? (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">
                         Reschedule Appointment
@@ -554,27 +554,17 @@ export default function DoctorAppointments() {
                         </button>
 
                         {selectedAppointment.status === "pending" && (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleStatusChange(selectedAppointment.id, "confirmed")
-                              }
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
-                            >
-                              Confirm Appointment
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleStatusChange(selectedAppointment.id, "completed")
-                              }
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
-                            >
-                              Mark as Completed
-                            </button>
-                          </>
+                          <button
+                            onClick={() =>
+                              handleStatusChange(selectedAppointment.id, "confirmed")
+                            }
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+                          >
+                            Confirm Appointment
+                          </button>
                         )}
                         
-                        {selectedAppointment.status === "confirmed" && (
+                        {(selectedAppointment.status === "pending" || selectedAppointment.status === "confirmed") && (
                           <button
                             onClick={() =>
                               handleStatusChange(selectedAppointment.id, "completed")
@@ -588,9 +578,13 @@ export default function DoctorAppointments() {
                     </>
                   )}
                 </div>
-              </div>
+              ) : (
+                <div>
+                  {/* Normal view content would go here */}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
