@@ -13,26 +13,6 @@ export default function DoctorDashboardLayout({ children }) {
   const { user, loading, setUser } = useUser();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      message: "New appointment booked",
-      time: "10 minutes ago",
-      read: false,
-    },
-    {
-      id: 2,
-      message: "Patient feedback received",
-      time: "2 hours ago",
-      read: false,
-    },
-    {
-      id: 3,
-      message: "Appointment rescheduled",
-      time: "Yesterday",
-      read: true,
-    },
-  ]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -44,12 +24,6 @@ export default function DoctorDashboardLayout({ children }) {
     return pathname === `/doctor/dashboard${path}`
       ? "bg-blue-100 text-blue-700"
       : "text-gray-600 hover:bg-blue-50 hover:text-blue-600";
-  };
-
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
   };
 
   return (
@@ -127,11 +101,6 @@ export default function DoctorDashboardLayout({ children }) {
                       d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                     />
                   </svg>
-                  {unreadNotifications > 0 && (
-                    <span className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow-sm transform scale-100 transition-transform animate-pulse">
-                      {unreadNotifications}
-                    </span>
-                  )}
                 </button>
 
                 {/* Notification Dropdown */}
@@ -142,74 +111,27 @@ export default function DoctorDashboardLayout({ children }) {
                         <h3 className="text-sm font-semibold text-gray-900">
                           Notifications
                         </h3>
-                        {unreadNotifications > 0 && (
-                          <button
-                            onClick={markAllAsRead}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
                       </div>
                       <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        {notifications.length > 0 ? (
-                          notifications.map((notification) => (
-                            <div
-                              key={notification.id}
-                              className={`p-3 mb-2 rounded-md ${
-                                notification.read ? "bg-white" : "bg-blue-50"
-                              } hover:bg-gray-50 transition-colors duration-150`}
-                            >
-                              <p className="text-sm font-medium text-gray-900 mb-1">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-500 flex items-center">
-                                <svg
-                                  className="h-3 w-3 mr-1"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                {notification.time}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <svg
-                              className="mx-auto h-10 w-10 text-gray-300"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                            <p className="mt-2 text-sm text-gray-500">
-                              No notifications
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {notifications.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-                          <a
-                            href="#"
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        <div className="text-center py-8">
+                          <svg
+                            className="mx-auto h-10 w-10 text-gray-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            View all notifications
-                          </a>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          <p className="mt-2 text-sm text-gray-500">
+                            No notifications
+                          </p>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}

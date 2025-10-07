@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// import { get } from "@/utils/api";
+import { appointmentApi, put } from "@/utils/api";
+import { useRouter } from "next/navigation";
 
 export default function DoctorAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -9,127 +10,33 @@ export default function DoctorAppointments() {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
-  // Simulate fetching appointments data
   useEffect(() => {
     const fetchAppointments = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        const mockAppointments = [
-          {
-            id: 1,
-            patientName: "Sarah Johnson",
-            patientId: "P10045",
-            patientAge: 34,
-            patientGender: "Female",
-            date: "2023-07-15",
-            time: "10:00 AM",
-            type: "Check-up",
-            status: "upcoming",
-            notes: "Regular check-up for hypertension monitoring",
-            contact: "+1 (555) 123-4567",
-          },
-          {
-            id: 2,
-            patientName: "Michael Chen",
-            patientId: "P10046",
-            patientAge: 45,
-            patientGender: "Male",
-            date: "2023-07-15",
-            time: "11:30 AM",
-            type: "Follow-up",
-            status: "upcoming",
-            notes: "Follow-up after medication adjustment",
-            contact: "+1 (555) 234-5678",
-          },
-          {
-            id: 3,
-            patientName: "Emma Davis",
-            patientId: "P10047",
-            patientAge: 28,
-            patientGender: "Female",
-            date: "2023-07-15",
-            time: "2:15 PM",
-            type: "Consultation",
-            status: "upcoming",
-            notes: "New patient consultation for chest pain",
-            contact: "+1 (555) 345-6789",
-          },
-          {
-            id: 4,
-            patientName: "Robert Wilson",
-            patientId: "P10048",
-            patientAge: 62,
-            patientGender: "Male",
-            date: "2023-07-15",
-            time: "3:45 PM",
-            type: "Check-up",
-            status: "upcoming",
-            notes: "Annual cardiac evaluation",
-            contact: "+1 (555) 456-7890",
-          },
-          {
-            id: 5,
-            patientName: "Jennifer Lopez",
-            patientId: "P10049",
-            patientAge: 41,
-            patientGender: "Female",
-            date: "2023-07-14",
-            time: "9:30 AM",
-            type: "Follow-up",
-            status: "completed",
-            notes: "Post-procedure follow-up",
-            contact: "+1 (555) 567-8901",
-          },
-          {
-            id: 6,
-            patientName: "David Brown",
-            patientId: "P10050",
-            patientAge: 55,
-            patientGender: "Male",
-            date: "2023-07-14",
-            time: "1:00 PM",
-            type: "Consultation",
-            status: "completed",
-            notes: "Consultation for arrhythmia symptoms",
-            contact: "+1 (555) 678-9012",
-          },
-          {
-            id: 7,
-            patientName: "Lisa Taylor",
-            patientId: "P10051",
-            patientAge: 37,
-            patientGender: "Female",
-            date: "2023-07-16",
-            time: "10:30 AM",
-            type: "Check-up",
-            status: "upcoming",
-            notes: "Regular monitoring for heart condition",
-            contact: "+1 (555) 789-0123",
-          },
-          {
-            id: 8,
-            patientName: "James Miller",
-            patientId: "P10052",
-            patientAge: 50,
-            patientGender: "Male",
-            date: "2023-07-13",
-            time: "11:00 AM",
-            type: "Follow-up",
-            status: "cancelled",
-            notes: "Patient cancelled due to emergency",
-            contact: "+1 (555) 890-1234",
-          },
-        ];
-
-        setAppointments(mockAppointments);
+      try {
+        // Use the appointmentApi helper instead of direct get call
+        const data = await appointmentApi.getDoctorAppointments();
+        const formattedAppointments = data.data.map((appointment) => ({
+          id: appointment._id,
+          patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+          patientId: appointment.patient.patientInfo ? appointment.patient.patientInfo.patientId : '',
+          date: new Date(appointment.date).toISOString().split("T")[0],
+          time: new Date(appointment.date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          type: appointment.reason,
+          status: appointment.status,
+          notes: appointment.notes,
+          contact: appointment.patient.phone,
+        }));
+        setAppointments(formattedAppointments);
+      } catch (error) { 
+        // Do nothing
+      } finally {
         setIsLoading(false);
-      }, 1000);
-
-      // Uncomment and use the following lines to fetch real data when the backend is ready
-      // const data = await get("/api/v1/appointments");
-      // setAppointments(data.data || []);
-      // setIsLoading(false);
+      }
     };
 
     fetchAppointments();
@@ -137,6 +44,9 @@ export default function DoctorAppointments() {
 
   const filteredAppointments = appointments.filter((appointment) => {
     if (activeTab === "all") return true;
+    if (activeTab === "upcoming") {
+      return appointment.status === "pending" || appointment.status === "confirmed";
+    }
     return appointment.status === activeTab;
   });
 
@@ -149,15 +59,22 @@ export default function DoctorAppointments() {
     setIsModalOpen(false);
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setAppointments(
-      appointments.map((appointment) =>
-        appointment.id === id
-          ? { ...appointment, status: newStatus }
-          : appointment
-      )
-    );
-    setIsModalOpen(false);
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const response = await put(`/api/v1/appointments/${id}`, {
+        status: newStatus,
+      });
+      setAppointments(
+        appointments.map((appointment) =>
+          appointment.id === id
+            ? { ...appointment, status: newStatus }
+            : appointment
+        )
+      );
+      setIsModalOpen(false);
+    } catch (error) {
+      // Do nothing
+    }
   };
 
   if (isLoading) {
@@ -172,7 +89,10 @@ export default function DoctorAppointments() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 flex items-center">
+        <button
+          onClick={() => router.push("/doctor/dashboard/appointments/new")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 flex items-center"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5 mr-2"
@@ -403,18 +323,6 @@ export default function DoctorAppointments() {
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">Age</h4>
-                  <p className="text-gray-900">
-                    {selectedAppointment.patientAge} years
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Gender</h4>
-                  <p className="text-gray-900">
-                    {selectedAppointment.patientGender}
-                  </p>
-                </div>
-                <div>
                   <h4 className="text-sm font-medium text-gray-500">Date</h4>
                   <p className="text-gray-900">
                     {new Date(selectedAppointment.date).toLocaleDateString()}
@@ -451,6 +359,17 @@ export default function DoctorAppointments() {
                   Close
                 </button>
 
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/doctor/dashboard/appointments/edit/${selectedAppointment.id}`
+                    )
+                  }
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+                >
+                  Edit
+                </button>
+
                 {selectedAppointment.status === "upcoming" && (
                   <>
                     <button
@@ -475,7 +394,7 @@ export default function DoctorAppointments() {
                 {selectedAppointment.status === "cancelled" && (
                   <button
                     onClick={() =>
-                      handleStatusChange(selectedAppointment.id, "upcoming")
+                      handleStatusChange(selectedAppointment.id, "pending")
                     }
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
                   >
@@ -490,3 +409,4 @@ export default function DoctorAppointments() {
     </div>
   );
 }
+

@@ -1,8 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import useUser from '../../../hooks/useUser';
-import { toTitleCase } from '../../../utils/text';
+import { useState, useEffect } from "react";
+import useUser from "../../../hooks/useUser";
+import { toTitleCase } from "../../../utils/text";
+import { get } from "@/utils/api";
+import Link from 'next/link';
 
 export default function DoctorDashboard() {
   const { user, loading: userLoading } = useUser();
@@ -18,80 +20,63 @@ export default function DoctorDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const [appointmentsRes, patientsRes, feedbackRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/appointments', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('http://localhost:5000/api/v1/patients', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('http://localhost:5000/api/v1/feedback', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        const appointmentsData = await appointmentsRes.json();
-        const patientsData = await patientsRes.json();
-        const feedbackData = await feedbackRes.json();
-
+        // Use the appointmentApi helper instead of direct get call
+        const appointmentsData = await get("/doctor/appointments");
         const appointments = appointmentsData.data || [];
-        const patients = patientsData.data || [];
-        const feedback = feedbackData.data || [];
 
-        const appointmentsToday = appointments.filter(
-          (a) => new Date(a.date).toDateString() === new Date().toDateString()
-        ).length;
-        const upcomingAppointments = appointments.slice(0, 4);
+        const upcomingAppointments = appointments
+          .filter(
+            (a) =>
+              new Date(a.date) >= new Date() &&
+              (a.status === "confirmed" || a.status === "pending")
+          )
+          .slice(0, 4);
 
         setStats({
-          appointmentsToday: appointmentsToday,
-          totalPatients: patients.length,
-          pendingReviews: feedback.length,
+          appointmentsToday: upcomingAppointments.length,
+          totalPatients: 0, // This will be updated later
+          pendingReviews: 0, // This will be updated later
           upcomingAppointments: upcomingAppointments.map((a) => ({
             id: a._id,
             patientName: `${a.patient.firstName} ${a.patient.lastName}`,
             time: new Date(a.date).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
+              hour: "2-digit",
+              minute: "2-digit",
             }),
             type: a.status,
           })),
         });
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        // Do nothing
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome, Dr. {toTitleCase(user?.firstName)} {toTitleCase(user?.lastName)}!
+            Welcome, Dr. {toTitleCase(user?.firstName)}{" "}
+            {toTitleCase(user?.lastName)}!
           </h1>
           <p className="text-sm text-gray-500">
             Here is a summary of your activities.
           </p>
         </div>
         <p className="text-sm text-gray-500">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           })}
         </p>
       </div>
@@ -102,15 +87,19 @@ export default function DoctorDashboard() {
         </div>
       ) : (
         <>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Your Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Full Name</p>
-                  <p className="text-lg font-bold text-gray-900">{toTitleCase(user?.firstName)} {toTitleCase(user?.lastName)}</p>
-                </div>
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Your Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Full Name</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {toTitleCase(user?.firstName)} {toTitleCase(user?.lastName)}
+                </p>
               </div>
             </div>
+          </div>
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -218,9 +207,9 @@ export default function DoctorDashboard() {
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-medium">
                         {appointment.patientName
-                          .split(' ')
+                          .split(" ")
                           .map((name) => name[0])
-                          .join('')}
+                          .join("")}
                       </div>
                       <div className="ml-4">
                         <h4 className="text-sm font-medium text-gray-900">
@@ -275,7 +264,7 @@ export default function DoctorDashboard() {
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              <Link href="/doctor/dashboard/book" className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"
@@ -291,9 +280,9 @@ export default function DoctorDashboard() {
                   />
                 </svg>
                 <span className="mt-2 text-sm font-medium text-gray-700">
-                  New Appointment
+                  Book Appointment
                 </span>
-              </button>
+              </Link>
 
               <button className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
                 <svg

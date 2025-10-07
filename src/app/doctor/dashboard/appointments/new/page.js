@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { get, post } from '@/utils/api';
+import useUser from '../../../../../hooks/useUser';
 
 export default function NewAppointment() {
   const router = useRouter();
+  const { user } = useUser();
   const [formData, setFormData] = useState({
     patient: '',
     date: '',
-    status: 'pending',
   });
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -16,31 +18,22 @@ export default function NewAppointment() {
 
   useEffect(() => {
     const fetchPatients = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const res = await fetch('http://localhost:5000/api/v1/patients', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
+        const data = await get('/patients');
+        if (data.success) {
           setPatients(data.data || []);
         } else {
-          console.error('Failed to fetch patients');
+          // Do nothing
         }
       } catch (error) {
-        console.error('Error fetching patients:', error);
+        // Do nothing
       } finally {
         setIsFetchingPatients(false);
       }
     };
 
     fetchPatients();
-  }, [router]);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -53,29 +46,21 @@ export default function NewAppointment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    const token = localStorage.getItem('token');
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
+      const response = await post('/appointments/book', {
+        ...formData,
+        doctor: user._id,
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (response.success) {
         alert('Appointment created successfully!');
         router.push('/doctor/dashboard/appointments');
       } else {
-        alert(data.error || 'Something went wrong');
+        alert(response.error || 'Something went wrong');
       }
     } catch (error) {
-      console.error('Error creating appointment:', error);
-      alert('An error occurred while creating the appointment.');
+      // Do nothing
     } finally {
       setIsLoading(false);
     }
@@ -103,8 +88,8 @@ export default function NewAppointment() {
               >
                 <option value="" disabled>Select a patient</option>
                 {patients.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.firstName} {p.lastName}
+                  <option key={p._id} value={p.user._id}>
+                    {p.user.firstName} {p.user.lastName}
                   </option>
                 ))}
               </select>
@@ -123,23 +108,6 @@ export default function NewAppointment() {
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
-          </div>
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              required
-              className="w-full pl-3 pr-8 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-            >
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
           </div>
           <div>
             <button
