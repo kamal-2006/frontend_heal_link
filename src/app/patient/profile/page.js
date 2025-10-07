@@ -296,18 +296,18 @@ export default function ViewProfile() {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-8 text-white">
+      <div className="bg-gradient-to-r from-blue-500 via-purple-400 to-pink-300 rounded-xl p-8 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="relative">
               {/* Profile Image with Default Avatar */}
-              <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl font-bold mr-6 overflow-hidden">
+              <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl font-bold mr-6 overflow-hidden ring-4 ring-white ring-opacity-50 shadow-lg">
                 {imagePreview ? (
                   <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
                 ) : patient?.profileImage ? (
                   <img src={patient.profileImage} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white to-blue-100 text-blue-600">
                     {patient?.user ? (
                       `${patient.user.firstName.charAt(0)}${patient.user.lastName.charAt(0)}`
                     ) : (
@@ -319,7 +319,7 @@ export default function ViewProfile() {
                 )}
               </div>
               {isEditing && (
-                <label className="absolute -bottom-2 -right-2 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full cursor-pointer shadow-lg">
+                <label className="absolute -bottom-2 -right-2 bg-white hover:bg-blue-50 text-blue-600 p-2 rounded-full cursor-pointer shadow-lg border-2 border-white">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -351,10 +351,10 @@ export default function ViewProfile() {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors flex items-center text-white shadow-lg border-2 border-orange-400"
+                className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-lg transition-all duration-200 flex items-center text-white shadow-lg font-medium border-2 border-orange-400 hover:border-orange-500"
               >
-                <svg className="w-4 h-4 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <svg className="w-4 h-4 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Edit Profile
               </button>

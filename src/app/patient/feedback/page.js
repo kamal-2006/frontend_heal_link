@@ -1,785 +1,406 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-// import { get } from "@/utils/api";
+import React, { useState, useEffect } from "react";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "react-chartjs-2";
+
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export default function FeedbackPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const appointmentId = searchParams.get("appointmentId");
-
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [appointments, setAppointments] = useState([]);
+  const [feedbackHistory, setFeedbackHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState(null);
-  const [newFeedback, setNewFeedback] = useState({
-    appointmentId: appointmentId || "",
-    rating: 0,
-    type: "Feedback",
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("available");
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    rating: 5,
     comment: "",
-  });
-
-  // Rating summary stats
-  const [ratingStats, setRatingStats] = useState({
-    total: 0,
-    unread: 0,
-    lowRating: 0,
-    averageRating: 0,
-    ratingCounts: [0, 0, 0, 0, 0],
+    feedbackType: "compliment"
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("token");
-      const role = localStorage.getItem("role");
+    fetchCompletedAppointments();
+    fetchFeedbackHistory();
+  }, []);
 
-      if (!token) {
-        setTimeout(() => router.push("/login"), 100);
-        return;
+  // Fetch completed appointments
+  const fetchCompletedAppointments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/feedback/patient/appointments`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data.data || []);
+      } else {
+        console.error("Failed to fetch appointments");
+        setAppointments([]);
       }
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (role !== "patient") {
-        alert("Access denied. Please login as a patient.");
-        setTimeout(() => router.push("/login"), 100);
-        return;
+  // Fetch submitted feedback history
+  const fetchFeedbackHistory = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/feedback/patient/history`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setFeedbackHistory(data.data || []);
+      } else {
+        console.error("Failed to fetch feedback history");
+        setFeedbackHistory([]);
       }
+    } catch (error) {
+      console.error("Error fetching feedback history:", error);
+      setFeedbackHistory([]);
+    }
+  };
 
-      // Simulate data loading
-      setTimeout(() => {
-        const mockFeedbacks = [
-          {
-            _id: "f1",
-            appointmentId: "a1",
-            doctorName: "Dr. John Smith",
-            doctorSpecialization: "Cardiology",
-            rating: 5,
-            type: "Feedback",
-            comment:
-              "Great experience! The doctor was very attentive and explained everything clearly.",
-            date: "2023-10-15T10:30:00",
-            status: "read",
-          },
-          {
-            _id: "f2",
-            appointmentId: "a2",
-            doctorName: "Dr. Sarah Johnson",
-            doctorSpecialization: "Dermatology",
-            rating: 4,
-            type: "Feedback",
-            comment:
-              "Good consultation, but had to wait a bit longer than expected.",
-            date: "2023-09-22T14:15:00",
-            status: "read",
-          },
-          {
-            _id: "f3",
-            appointmentId: "a3",
-            doctorName: "Dr. Michael Chen",
-            doctorSpecialization: "Neurology",
-            rating: 2,
-            type: "Complaint",
-            comment:
-              "The doctor seemed rushed and didn't address all my concerns.",
-            date: "2023-08-05T09:45:00",
-            status: "unread",
-          },
-          {
-            _id: "f4",
-            appointmentId: "a4",
-            doctorName: "Dr. Emily Wilson",
-            doctorSpecialization: "Pediatrics",
-            rating: 5,
-            type: "Feedback",
-            comment: "Excellent with my child! Very patient and thorough.",
-            date: "2023-07-18T16:00:00",
-            status: "unread",
-          },
-          {
-            _id: "f5",
-            appointmentId: "a5",
-            doctorName: "Dr. Robert Lee",
-            doctorSpecialization: "Orthopedics",
-            rating: 3,
-            type: "Feedback",
-            comment:
-              "Treatment was effective but could improve on explaining the recovery process.",
-            date: "2023-06-30T11:20:00",
-            status: "read",
-          },
-        ];
+  // Submit feedback
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedAppointment) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          appointment: selectedAppointment._id,
+          rating: feedbackForm.rating,
+          comment: feedbackForm.comment,
+          feedbackType: feedbackForm.feedbackType
+        }),
+      });
 
-        setFeedbacks(mockFeedbacks);
+      if (response.ok) {
+        // Show success popup
+        setShowSuccessPopup(true);
+        
+        // Auto-hide success popup after 3 seconds
+        setTimeout(() => {
+          setShowSuccessPopup(false);
+        }, 3000);
 
-        // Calculate statistics
-        const total = mockFeedbacks.length;
-        const unread = mockFeedbacks.filter(
-          (f) => f.status === "unread"
-        ).length;
-        const lowRating = mockFeedbacks.filter((f) => f.rating <= 2).length;
-        const ratingSum = mockFeedbacks.reduce((sum, f) => sum + f.rating, 0);
-        const averageRating = total > 0 ? (ratingSum / total).toFixed(1) : 0;
+        // Reset form and close modal
+        setFeedbackForm({ rating: 5, comment: "", feedbackType: "compliment" });
+        setShowFeedbackModal(false);
+        setSelectedAppointment(null);
+        
+        // Refresh data
+        fetchCompletedAppointments();
+        fetchFeedbackHistory();
+      } else {
+        console.error("Failed to submit feedback");
+      }
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+    }
+  };
 
-        const ratingCounts = [0, 0, 0, 0, 0];
-        mockFeedbacks.forEach((f) => {
-          if (f.rating >= 1 && f.rating <= 5) {
-            ratingCounts[f.rating - 1]++;
-          }
-        });
-
-        setRatingStats({
-          total,
-          unread,
-          lowRating,
-          averageRating,
-          ratingCounts,
-        });
-
-        setIsLoading(false);
-
-        if (appointmentId) {
-          setShowFeedbackModal(true);
-        }
-      }, 1000);
-    };
-
-    fetchData();
-  }, [router, appointmentId]);
-
-  const handleViewFeedback = (feedback) => {
-    setSelectedFeedback(feedback);
+  // Open feedback modal
+  const openFeedbackModal = (appointment) => {
+    setSelectedAppointment(appointment);
     setShowFeedbackModal(true);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewFeedback({
-      ...newFeedback,
-      [name]: value,
-    });
+  // Render star rating with SVG icons
+  const renderStars = (rating, interactive = false, onRatingChange = null) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <button
+          key={i}
+          type="button"
+          disabled={!interactive}
+          onClick={() => interactive && onRatingChange && onRatingChange(i)}
+          className={`${interactive ? "cursor-pointer hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50" : "cursor-default"} transition-all duration-200 rounded p-1`}
+        >
+          <svg
+            className={`w-6 h-6 ${i <= rating ? "text-yellow-400" : "text-gray-300"} ${interactive && i <= rating ? "drop-shadow-sm" : ""}`}
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        </button>
+      );
+    }
+    return <div className="flex items-center space-x-1">{stars}</div>;
   };
 
-  const handleRatingChange = (rating) => {
-    setNewFeedback({
-      ...newFeedback,
-      rating,
-    });
+  // Format date for appointments
+  const formatDate = (dateString) => {
+    const options = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    };
+    return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const handleTypeChange = (type) => {
-    setNewFeedback({
-      ...newFeedback,
-      type,
-    });
+  // Format date for feedback submission
+  const formatFeedbackDate = (dateString) => {
+    const date = new Date(dateString);
+    const options = {
+      year: "numeric",
+      month: "short", 
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    };
+    return date.toLocaleDateString(undefined, options);
   };
 
-  const handleSubmitFeedback = (e) => {
-    e.preventDefault();
+  // Check if feedback already submitted for appointment
+  const isFeedbackSubmitted = (appointmentId) => {
+    return feedbackHistory.some(feedback => feedback.appointment._id === appointmentId);
+  };
 
-    if (newFeedback.rating === 0 || !newFeedback.comment.trim()) {
-      alert("Please provide both a rating and comment");
-      return;
+  // Filter appointments based on active filter
+  const filteredAppointments = appointments.filter(appointment => {
+    if (activeFilter === "available") {
+      return !isFeedbackSubmitted(appointment._id);
+    } else {
+      return isFeedbackSubmitted(appointment._id);
+    }
+  });
+
+  // Generate pie chart data for feedback ratings
+  const getPieChartData = () => {
+    if (feedbackHistory.length === 0) {
+      return {
+        labels: ["No feedback yet"],
+        datasets: [{
+          data: [1],
+          backgroundColor: ["#E5E7EB"],
+          borderColor: ["#9CA3AF"],
+          borderWidth: 1,
+        }]
+      };
     }
 
-    // Add new feedback
-    const newFeedbackItem = {
-      _id: `new-${Date.now()}`,
-      appointmentId: newFeedback.appointmentId,
-      doctorName: "Dr. New Feedback",
-      doctorSpecialization: "General",
-      rating: newFeedback.rating,
-      type: newFeedback.type,
-      comment: newFeedback.comment,
-      date: new Date().toISOString(),
-      status: "unread",
+    const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    feedbackHistory.forEach(feedback => {
+      ratingCounts[feedback.rating]++;
+    });
+
+    return {
+      labels: ["5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star"],
+      datasets: [{
+        data: [ratingCounts[5], ratingCounts[4], ratingCounts[3], ratingCounts[2], ratingCounts[1]],
+        backgroundColor: [
+          "#4ADE80", // Bright green for 5 stars
+          "#60A5FA", // Light blue for 4 stars  
+          "#FBBF24", // Bright yellow for 3 stars
+          "#FB923C", // Warm orange for 2 stars
+          "#F87171", // Soft red for 1 star
+        ],
+        borderColor: [
+          "#22C55E",
+          "#3B82F6", 
+          "#F59E0B",
+          "#F97316",
+          "#EF4444",
+        ],
+        borderWidth: 2,
+        hoverBorderWidth: 3,
+      }]
     };
-
-    setFeedbacks([newFeedbackItem, ...feedbacks]);
-
-    // Update stats
-    const newTotal = ratingStats.total + 1;
-    const newRatingCounts = ratingStats.ratingCounts.map((count, index) =>
-      index === newFeedback.rating - 1 ? count + 1 : count
-    );
-    const totalRatingSum = newRatingCounts.reduce(
-      (sum, count, index) => sum + count * (index + 1),
-      0
-    );
-    const newAverageRating = newTotal > 0 ? totalRatingSum / newTotal : 0;
-
-    setRatingStats({
-      ...ratingStats,
-      total: newTotal,
-      unread: ratingStats.unread + 1,
-      lowRating:
-        newFeedback.rating <= 2
-          ? ratingStats.lowRating + 1
-          : ratingStats.lowRating,
-      averageRating: newAverageRating,
-      ratingCounts: newRatingCounts,
-    });
-
-    // Reset form and close modal
-    setNewFeedback({
-      appointmentId: "",
-      rating: 0,
-      type: "Feedback",
-      comment: "",
-    });
-    setShowFeedbackModal(false);
   };
 
-  const maxRatingCount = Math.max(
-    ...(ratingStats.ratingCounts || [0, 0, 0, 0, 0]),
-    1
-  );
-
-  // Hospital color scheme - calming blues and greens
-  const colors = {
-    primary: "#2563eb", // Professional blue
-    secondary: "#059669", // Healing green
-    accent: "#0891b2", // Light blue
-    background: "#f8fafc", // Soft gray
-    card: "#ffffff",
-    text: "#1e293b",
-    muted: "#64748b",
-    success: "#10b981",
-    warning: "#f59e0b",
-    error: "#ef4444",
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || "";
+            const value = context.parsed;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
   };
 
-  // Remove the full-screen loading - we'll use inline loading like reports page
+  // Calculate average rating
+  const averageRating = feedbackHistory.length > 0 
+    ? (feedbackHistory.reduce((sum, feedback) => sum + feedback.rating, 0) / feedbackHistory.length).toFixed(1)
+    : 0;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: colors.background }}
-    >
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: colors.text }}>
-              Patient Feedback Center
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Help us improve our healthcare services
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">Feedback & Reviews</h1>
+            <p className="text-gray-600 mt-2">Share your experience and help us improve our services</p>
           </div>
-          <button
-            onClick={() => {
-              setSelectedFeedback(null);
-              setNewFeedback({
-                appointmentId: "",
-                rating: 0,
-                type: "Feedback",
-                comment: "",
-              });
-              setShowFeedbackModal(true);
-            }}
-            className="px-6 py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
-            style={{ backgroundColor: colors.primary, color: "white" }}
-          >
-            <span className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Share Feedback
-            </span>
-          </button>
         </div>
 
-        {/* Rating Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div
-            className="rounded-lg p-4 shadow-sm border-l-4"
-            style={{
-              backgroundColor: colors.card,
-              borderLeftColor: colors.primary,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="text-xs font-medium"
-                  style={{ color: colors.muted }}
-                >
-                  Average Rating
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  {typeof ratingStats.averageRating === "number"
-                    ? ratingStats.averageRating.toFixed(1)
-                    : "0.0"}
-                </p>
-                <div className="flex mt-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg
-                      key={star}
-                      className={`w-4 h-4 ${
-                        star <= Math.round(ratingStats.averageRating)
-                          ? "text-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
+        {/* Statistics Cards */}
+        {feedbackHistory.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1.1" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Feedback</p>
+                  <p className="text-2xl font-semibold text-gray-900">{feedbackHistory.length}</p>
                 </div>
               </div>
-              <div
-                className="p-2 rounded-full"
-                style={{ backgroundColor: `${colors.primary}10` }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{ color: colors.primary }}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </div>
             </div>
-          </div>
 
-          <div
-            className="rounded-lg p-4 shadow-sm border-l-4"
-            style={{
-              backgroundColor: colors.card,
-              borderLeftColor: colors.success,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="text-xs font-medium"
-                  style={{ color: colors.muted }}
-                >
-                  Total Reviews
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  {ratingStats.total}
-                </p>
-              </div>
-              <div
-                className="p-2 rounded-full"
-                style={{ backgroundColor: `${colors.success}10` }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{ color: colors.success }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-lg p-4 shadow-sm border-l-4"
-            style={{
-              backgroundColor: colors.card,
-              borderLeftColor: colors.warning,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="text-xs font-medium"
-                  style={{ color: colors.muted }}
-                >
-                  Unread
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  {ratingStats.unread}
-                </p>
-              </div>
-              <div
-                className="p-2 rounded-full"
-                style={{ backgroundColor: `${colors.warning}10` }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{ color: colors.warning }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-lg p-4 shadow-sm border-l-4"
-            style={{
-              backgroundColor: colors.card,
-              borderLeftColor: colors.error,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="text-xs font-medium"
-                  style={{ color: colors.muted }}
-                >
-                  Low Ratings
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: colors.text }}
-                >
-                  {ratingStats.lowRating}
-                </p>
-              </div>
-              <div
-                className="p-2 rounded-full"
-                style={{ backgroundColor: `${colors.error}10` }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{ color: colors.error }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feedback Analytics Dashboard */}
-        <div
-          className="rounded-lg shadow-sm overflow-hidden"
-          style={{ backgroundColor: colors.card }}
-        >
-          <div className="p-4 border-b" style={{ borderColor: "#f1f5f9" }}>
-            <h2
-              className="text-lg font-semibold flex items-center"
-              style={{ color: colors.text }}
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                style={{ color: colors.primary }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                />
-              </svg>
-              Feedback Analytics
-            </h2>
-          </div>
-
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Satisfaction Overview */}
-              <div className="flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                <div className="relative w-36 h-36 mb-3">
-                  {/* Circular Progress Ring */}
-                  <svg
-                    className="w-36 h-36 transform -rotate-90"
-                    viewBox="0 0 100 100"
-                  >
-                    {/* Background circle */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="transparent"
-                      className="text-gray-200"
-                    />
-                    {/* Progress circle */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      stroke="url(#gradient)"
-                      strokeWidth="6"
-                      fill="transparent"
-                      strokeDasharray={`${2 * Math.PI * 42}`}
-                      strokeDashoffset={`${
-                        2 * Math.PI * 42 * (1 - ratingStats.averageRating / 5)
-                      }`}
-                      className="transition-all duration-1500 ease-out"
-                      strokeLinecap="round"
-                    />
-                    {/* Gradient definition */}
-                    <defs>
-                      <linearGradient
-                        id="gradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="100%"
-                        y2="100%"
-                      >
-                        <stop offset="0%" stopColor="#3b82f6" />
-                        <stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                    </defs>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <svg className="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        {typeof ratingStats.averageRating === "number"
-                          ? ratingStats.averageRating.toFixed(1)
-                          : "0.0"}
-                      </div>
-                      <div className="text-xs font-medium text-gray-500 -mt-1">
-                        out of 5
-                      </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-2xl font-semibold text-gray-900">{averageRating}</p>
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="text-center space-y-2">
-                  <div className="flex justify-center space-x-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg
-                        key={star}
-                        className={`w-5 h-5 ${
-                          star <= Math.round(ratingStats.averageRating)
-                            ? "text-yellow-400"
-                            : "text-gray-300"
-                        } transition-colors duration-300`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <p className="text-sm font-semibold text-gray-700">
-                    Overall Satisfaction
-                  </p>
-                  <div className="flex items-center justify-center space-x-4 text-xs text-gray-600 bg-white bg-opacity-60 rounded-lg px-3 py-1">
-                    <span>Total Reviews: {ratingStats.total}</span>
-                  </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Appointments Rated</p>
+                  <p className="text-2xl font-semibold text-gray-900">{feedbackHistory.length}</p>
                 </div>
               </div>
+            </div>
 
-              {/* Rating Breakdown */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Rating Breakdown
-                  </h3>
-                  <div className="px-3 py-1 bg-gray-100 rounded-full">
-                    <span className="text-xs font-medium text-gray-600">
-                      Last 30 days
-                    </span>
-                  </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
                 </div>
-
-                <div className="space-y-3">
-                  {[
-                    {
-                      rating: 5,
-                      label: "Excellent",
-                      color: "bg-emerald-500",
-                      bgColor: "bg-emerald-50",
-                      textColor: "text-emerald-700",
-                      borderColor: "border-emerald-200",
-                      icon: "😊",
-                    },
-                    {
-                      rating: 4,
-                      label: "Good",
-                      color: "bg-blue-500",
-                      bgColor: "bg-blue-50",
-                      textColor: "text-blue-700",
-                      borderColor: "border-blue-200",
-                      icon: "👍",
-                    },
-                    {
-                      rating: 3,
-                      label: "Average",
-                      color: "bg-amber-500",
-                      bgColor: "bg-amber-50",
-                      textColor: "text-amber-700",
-                      borderColor: "border-amber-200",
-                      icon: "😐",
-                    },
-                    {
-                      rating: 2,
-                      label: "Poor",
-                      color: "bg-orange-500",
-                      bgColor: "bg-orange-50",
-                      textColor: "text-orange-700",
-                      borderColor: "border-orange-200",
-                      icon: "😟",
-                    },
-                    {
-                      rating: 1,
-                      label: "Very Poor",
-                      color: "bg-red-500",
-                      bgColor: "bg-red-50",
-                      textColor: "text-red-700",
-                      borderColor: "border-red-200",
-                      icon: "😞",
-                    },
-                  ].map((item) => {
-                    const count =
-                      ratingStats.ratingCounts[item.rating - 1] || 0;
-                    const percentage =
-                      ratingStats.total > 0
-                        ? (count / ratingStats.total) * 100
-                        : 0;
-
-                    return (
-                      <div
-                        key={item.rating}
-                        className={`p-4 rounded-xl ${item.bgColor} border ${item.borderColor} hover:shadow-md transition-all duration-300 transform hover:scale-[1.02]`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm">
-                              <span className="text-lg">{item.icon}</span>
-                            </div>
-                            <div>
-                              <div className="flex items-center space-x-1">
-                                {[...Array(item.rating)].map((_, i) => (
-                                  <svg
-                                    key={i}
-                                    className="w-3 h-3 text-yellow-400"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
-                                {[...Array(5 - item.rating)].map((_, i) => (
-                                  <svg
-                                    key={i}
-                                    className="w-3 h-3 text-gray-300"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
-                              </div>
-                              <span
-                                className={`text-sm font-semibold ${item.textColor}`}
-                              >
-                                {item.label}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div
-                              className={`text-lg font-bold ${item.textColor}`}
-                            >
-                              {count}
-                            </div>
-                            <div className="text-xs text-gray-500 font-medium">
-                              {percentage.toFixed(1)}%
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="relative">
-                          <div className="w-full bg-white bg-opacity-70 rounded-full h-3 overflow-hidden shadow-inner">
-                            <div
-                              className={`h-full rounded-full ${item.color} transition-all duration-1000 ease-out relative overflow-hidden`}
-                              style={{ width: `${percentage}%` }}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 transform -skew-x-12 animate-pulse"></div>
-                            </div>
-                          </div>
-                          {percentage > 0 && (
-                            <div className="absolute top-0 right-0 transform translate-y-[-100%] mb-1">
-                              <div
-                                className={`px-2 py-1 text-xs font-medium ${item.textColor} bg-white rounded shadow-sm`}
-                              >
-                                {percentage.toFixed(1)}%
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending Reviews</p>
+                  <p className="text-2xl font-semibold text-gray-900">{appointments.filter(app => !isFeedbackSubmitted(app._id)).length}</p>
                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Pie Chart Section */}
+        {feedbackHistory.length > 0 && (
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Rating Distribution</h2>
+              <p className="text-gray-600">Overview of your feedback ratings</p>
+            </div>
+            <div className="p-6">
+              <div className="h-64 flex justify-center">
+                <Pie data={getPieChartData()} options={chartOptions} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filter Tabs */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+          <button
+            onClick={() => setActiveFilter("available")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeFilter === "available"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Available for Feedback ({appointments.filter(app => !isFeedbackSubmitted(app._id)).length})
+          </button>
+          <button
+            onClick={() => setActiveFilter("completed")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeFilter === "completed"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Feedback Submitted ({feedbackHistory.length})
+          </button>
         </div>
 
-        {/* Feedback History Table */}
-        <div
-          className="rounded-xl shadow-lg overflow-hidden"
-          style={{ backgroundColor: colors.card }}
-        >
-          <div className="p-6 border-b" style={{ borderColor: "#f1f5f9" }}>
-            <h2
-              className="text-xl font-semibold flex items-center"
-              style={{ color: colors.text }}
-            >
-              <svg
-                className="w-5 h-5 mr-3"
-                style={{ color: colors.primary }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Feedback History
+        {/* Appointments Table */}
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {activeFilter === "available" ? "Appointments Available for Feedback" : "Feedback History"}
             </h2>
           </div>
 
@@ -787,199 +408,160 @@ export default function FeedbackPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Doctor & Specialty
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Doctor
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Rating
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date & Time
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Type
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Date
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  {activeFilter === "completed" && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Rating
+                    </th>
+                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                      </div>
-                      <div className="mt-2">Loading feedback...</div>
-                    </td>
-                  </tr>
-                ) : feedbacks && feedbacks.length > 0 ? (
-                  feedbacks.map((feedback) => (
-                    <tr
-                      key={feedback._id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
-                            style={{ backgroundColor: `${colors.primary}10` }}
-                          >
-                            <span
-                              className="text-sm font-medium"
-                              style={{ color: colors.primary }}
-                            >
-                              {feedback.doctorName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                          <div>
-                            <div
-                              className="text-sm font-medium"
-                              style={{ color: colors.text }}
-                            >
-                              {feedback.doctorName}
-                            </div>
-                            <div
-                              className="text-sm"
-                              style={{ color: colors.muted }}
-                            >
-                              {feedback.doctorSpecialization}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              className={`h-5 w-5 ${
-                                star <= feedback.rating
-                                  ? "text-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            feedback.type === "Complaint"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {feedback.type}
-                        </span>
-                      </td>
-                      <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: colors.muted }}
-                      >
-                        {new Date(feedback.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            feedback.status === "unread"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {feedback.status.charAt(0).toUpperCase() +
-                            feedback.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleViewFeedback(feedback)}
-                          className="p-2 rounded-full transition-all duration-300 hover:shadow-md hover:bg-blue-50"
-                          style={{ color: colors.primary }}
-                          title="View Feedback Details"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
+                {activeFilter === "available" ? (
+                  filteredAppointments.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1.1" />
                           </svg>
-                        </button>
+                          <h3 className="text-lg font-medium text-gray-900 mb-1">No appointments available for feedback</h3>
+                          <p className="text-gray-500">Complete appointments will appear here for you to provide feedback.</p>
+                        </div>
                       </td>
                     </tr>
-                  ))
+                  ) : (
+                    filteredAppointments.map((appointment) => (
+                      <tr key={appointment._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-blue-600 font-medium text-sm">
+                                {appointment.doctor ? 
+                                  `${appointment.doctor.firstName?.[0] || ''}${appointment.doctor.lastName?.[0] || ''}` : 
+                                  'Dr'
+                                }
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                Dr. {appointment.doctor ? 
+                                  `${appointment.doctor.firstName} ${appointment.doctor.lastName}` : 
+                                  'Unknown Doctor'
+                                }
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {appointment.doctor?.specialty || 'General Medicine'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{formatDate(appointment.appointmentDate)}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {appointment.appointmentType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Completed
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => openFeedbackModal(appointment)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                          >
+                            Give Feedback
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )
                 ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
-                      <div className="text-center">
-                        <svg
-                          className="w-12 h-12 text-gray-400 mx-auto mb-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                          />
-                        </svg>
-                        <p className="text-gray-500 text-sm">
-                          No feedback history available
-                        </p>
-                        <p className="text-gray-400 text-xs mt-1">
-                          Your feedback will appear here after appointments
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  feedbackHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <h3 className="text-lg font-medium text-gray-900 mb-1">No feedback submitted yet</h3>
+                          <p className="text-gray-500">Your feedback history will appear here after you submit reviews.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    feedbackHistory.map((feedback) => (
+                      <tr key={feedback._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-blue-600 font-medium text-sm">
+                                {feedback.doctor ? 
+                                  `${feedback.doctor.firstName?.[0] || ''}${feedback.doctor.lastName?.[0] || ''}` : 
+                                  'Dr'
+                                }
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                Dr. {feedback.doctor ? 
+                                  `${feedback.doctor.firstName} ${feedback.doctor.lastName}` : 
+                                  'Unknown Doctor'
+                                }
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {feedback.doctor?.specialty || 'General Medicine'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{formatFeedbackDate(feedback.createdAt)}</div>
+                          <div className="text-xs text-gray-500">Submitted</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {feedback.appointment.appointmentType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Feedback Submitted
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {renderStars(feedback.rating)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {feedback.comment ? (
+                              <span className="text-gray-600 italic">"{feedback.comment.substring(0, 50)}..."</span>
+                            ) : (
+                              <span className="text-gray-400">No comment</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )
                 )}
               </tbody>
             </table>
@@ -987,334 +569,167 @@ export default function FeedbackPage() {
         </div>
       </div>
 
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-sm mx-4 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Success!</h3>
+            <p className="text-gray-600">Feedback submitted successfully</p>
+          </div>
+        </div>
+      )}
+
       {/* Feedback Modal */}
-      {showFeedbackModal && (
+      {showFeedbackModal && selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b" style={{ borderColor: "#f1f5f9" }}>
+          <div className="bg-white rounded-lg max-w-md w-full max-h-screen overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3
-                  className="text-xl font-semibold flex items-center"
-                  style={{ color: colors.text }}
-                >
-                  <svg
-                    className="w-6 h-6 mr-3"
-                    style={{ color: colors.primary }}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  {selectedFeedback
-                    ? "Feedback Details"
-                    : "Share Your Experience"}
-                </h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Share Your Feedback</h3>
+                  <p className="text-sm text-gray-600">
+                    Dr. {selectedAppointment.doctor ? 
+                      `${selectedAppointment.doctor.firstName} ${selectedAppointment.doctor.lastName}` : 
+                      'Unknown Doctor'
+                    }
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowFeedbackModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
 
             <div className="p-6">
-              {selectedFeedback ? (
-                <div className="space-y-6">
-                  <div
-                    className="flex items-center space-x-4 pb-4 border-b"
-                    style={{ borderColor: "#f1f5f9" }}
-                  >
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: `${colors.primary}10` }}
-                    >
-                      <span
-                        className="font-medium"
-                        style={{ color: colors.primary }}
-                      >
-                        {selectedFeedback.doctorName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </span>
-                    </div>
-                    <div>
-                      <div
-                        className="font-medium"
-                        style={{ color: colors.text }}
-                      >
-                        {selectedFeedback.doctorName}
-                      </div>
-                      <div className="text-sm" style={{ color: colors.muted }}>
-                        {selectedFeedback.doctorSpecialization}
-                      </div>
-                    </div>
+              <form onSubmit={handleSubmitFeedback} className="space-y-6">
+                {/* Rating Section */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    How would you rate your experience? *
+                  </label>
+                  <div className="flex justify-center mb-3">
+                    {renderStars(feedbackForm.rating, true, (rating) => 
+                      setFeedbackForm({ ...feedbackForm, rating })
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4
-                        className="text-sm font-medium mb-2"
-                        style={{ color: colors.muted }}
-                      >
-                        Rating
-                      </h4>
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <svg
-                            key={star}
-                            className={`h-6 w-6 ${
-                              star <= selectedFeedback.rating
-                                ? "text-yellow-400"
-                                : "text-gray-300"
-                            }`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4
-                        className="text-sm font-medium mb-2"
-                        style={{ color: colors.muted }}
-                      >
-                        Type
-                      </h4>
-                      <span
-                        className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
-                          selectedFeedback.type === "Complaint"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {selectedFeedback.type}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4
-                        className="text-sm font-medium mb-2"
-                        style={{ color: colors.muted }}
-                      >
-                        Date
-                      </h4>
-                      <p className="text-sm" style={{ color: colors.text }}>
-                        {new Date(selectedFeedback.date).toLocaleString()}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4
-                        className="text-sm font-medium mb-2"
-                        style={{ color: colors.muted }}
-                      >
-                        Status
-                      </h4>
-                      <span
-                        className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
-                          selectedFeedback.status === "unread"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {selectedFeedback.status.charAt(0).toUpperCase() +
-                          selectedFeedback.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      className="text-sm font-medium mb-3"
-                      style={{ color: colors.muted }}
-                    >
-                      Your Feedback
-                    </h4>
-                    <div
-                      className="p-4 rounded-lg"
-                      style={{ backgroundColor: colors.background }}
-                    >
-                      <p className="text-sm" style={{ color: colors.text }}>
-                        {selectedFeedback.comment}
-                      </p>
-                    </div>
+                  <div className="text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      feedbackForm.rating === 5 ? "bg-green-100 text-green-800" :
+                      feedbackForm.rating === 4 ? "bg-blue-100 text-blue-800" :
+                      feedbackForm.rating === 3 ? "bg-yellow-100 text-yellow-800" :
+                      feedbackForm.rating === 2 ? "bg-orange-100 text-orange-800" :
+                      "bg-red-100 text-red-800"
+                    }`}>
+                      {feedbackForm.rating === 5 ? "Excellent!" :
+                       feedbackForm.rating === 4 ? "Good" :
+                       feedbackForm.rating === 3 ? "Average" :
+                       feedbackForm.rating === 2 ? "Poor" :
+                       "Very Poor"}
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmitFeedback} className="space-y-6">
-                  {/* Rating Selection */}
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-3"
-                      style={{ color: colors.text }}
-                    >
-                      How would you rate your experience?
-                    </label>
-                    <div className="flex justify-center space-x-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => handleRatingChange(star)}
-                          className="focus:outline-none p-2 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                          <svg
-                            className={`h-10 w-10 ${
-                              star <= newFeedback.rating
-                                ? "text-yellow-400"
-                                : "text-gray-300"
-                            } hover:text-yellow-400`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Feedback Type */}
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-3"
-                      style={{ color: colors.text }}
-                    >
-                      What type of feedback is this?
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          newFeedback.type === "Feedback"
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => handleTypeChange("Feedback")}
-                      >
-                        <div className="flex items-center">
-                          <input
-                            type="radio"
-                            checked={newFeedback.type === "Feedback"}
-                            onChange={() => handleTypeChange("Feedback")}
-                            className="h-4 w-4 text-blue-600"
-                          />
-                          <div className="ml-3">
-                            <div
-                              className="font-medium"
-                              style={{ color: colors.text }}
-                            >
-                              Positive Feedback
-                            </div>
-                            <div
-                              className="text-sm"
-                              style={{ color: colors.muted }}
-                            >
-                              Share a good experience
-                            </div>
-                          </div>
-                        </div>
+                {/* Feedback Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Type of feedback
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="feedbackType"
+                        value="compliment"
+                        checked={feedbackForm.feedbackType === "compliment"}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, feedbackType: e.target.value })}
+                        className="sr-only"
+                      />
+                      <div className={`text-center ${feedbackForm.feedbackType === "compliment" ? "text-green-600" : "text-gray-500"}`}>
+                        <div className="text-2xl mb-1">😊</div>
+                        <div className="text-sm font-medium">Compliment</div>
                       </div>
-
-                      <div
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          newFeedback.type === "Complaint"
-                            ? "border-red-500 bg-red-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => handleTypeChange("Complaint")}
-                      >
-                        <div className="flex items-center">
-                          <input
-                            type="radio"
-                            checked={newFeedback.type === "Complaint"}
-                            onChange={() => handleTypeChange("Complaint")}
-                            className="h-4 w-4 text-red-600"
-                          />
-                          <div className="ml-3">
-                            <div
-                              className="font-medium"
-                              style={{ color: colors.text }}
-                            >
-                              Complaint
-                            </div>
-                            <div
-                              className="text-sm"
-                              style={{ color: colors.muted }}
-                            >
-                              Report an issue
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comment */}
-                  <div>
-                    <label
-                      htmlFor="comment"
-                      className="block text-sm font-medium mb-3"
-                      style={{ color: colors.text }}
-                    >
-                      Please share your experience
                     </label>
-                    <textarea
-                      id="comment"
-                      name="comment"
-                      rows="4"
-                      value={newFeedback.comment}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent transition-all"
-                      style={{ focusRingColor: colors.primary }}
-                      placeholder="Your feedback helps us improve our healthcare services..."
-                    ></textarea>
+                    <label className="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="feedbackType"
+                        value="complaint"
+                        checked={feedbackForm.feedbackType === "complaint"}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, feedbackType: e.target.value })}
+                        className="sr-only"
+                      />
+                      <div className={`text-center ${feedbackForm.feedbackType === "complaint" ? "text-red-600" : "text-gray-500"}`}>
+                        <div className="text-2xl mb-1">😞</div>
+                        <div className="text-sm font-medium">Complaint</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="feedbackType"
+                        value="suggestion"
+                        checked={feedbackForm.feedbackType === "suggestion"}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, feedbackType: e.target.value })}
+                        className="sr-only"
+                      />
+                      <div className={`text-center ${feedbackForm.feedbackType === "suggestion" ? "text-blue-600" : "text-gray-500"}`}>
+                        <div className="text-2xl mb-1">💡</div>
+                        <div className="text-sm font-medium">Suggestion</div>
+                      </div>
+                    </label>
                   </div>
+                </div>
 
-                  <div className="flex justify-end space-x-4 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowFeedbackModal(false)}
-                      className="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                      style={{ color: colors.text }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-3 rounded-lg text-sm font-medium text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: colors.primary }}
-                      disabled={
-                        newFeedback.rating === 0 || !newFeedback.comment.trim()
-                      }
-                    >
-                      Submit Feedback
-                    </button>
-                  </div>
-                </form>
-              )}
+                {/* Comment Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {feedbackForm.feedbackType === "complaint" ? "What went wrong?" : 
+                     feedbackForm.feedbackType === "suggestion" ? "Your suggestion:" : 
+                     "What did you like?"}
+                  </label>
+                  <textarea
+                    value={feedbackForm.comment}
+                    onChange={(e) => setFeedbackForm({ ...feedbackForm, comment: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    placeholder={
+                      feedbackForm.feedbackType === "complaint" ? "Please describe the issue you experienced..." :
+                      feedbackForm.feedbackType === "suggestion" ? "How can we improve your experience?" :
+                      "Share what made your visit great..."
+                    }
+                  />
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center font-medium"
+                  >
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Submit Feedback
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

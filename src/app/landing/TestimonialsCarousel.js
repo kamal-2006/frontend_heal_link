@@ -160,9 +160,9 @@ export default function TestimonialsCarousel() {
         {/* Carousel Container */}
         <div className="relative overflow-hidden">
           <div 
-            className="flex transition-transform duration-1000 ease-in-out"
+            className="flex"
             style={{
-              transform: `translateX(-${currentIndex * 100}%)`
+              // transform: `translateX(-${currentIndex * 100}%)`
             }}
           >
             {/* Create slides */}
@@ -175,7 +175,7 @@ export default function TestimonialsCarousel() {
                   {TESTIMONIALS.slice(slideIndex * visibleCards, (slideIndex * visibleCards) + visibleCards).map((testimonial) => (
                     <div
                       key={testimonial.id}
-                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative ${testimonial.borderColor} dark:border-gray-600 border`}
+                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg relative ${testimonial.borderColor} dark:border-gray-600 border`}
                     >
                       <div className={`${testimonial.quoteColor} dark:text-gray-400 text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
                         &#8220;

@@ -188,8 +188,8 @@ export default function PatientAppointmentsPage() {
                   </div>
                 )}
                 
-                {/* Actions for upcoming appointments */}
-                {appointment.status === "upcoming" && (
+                {/* Actions for pending appointments only */}
+                {appointment.status === "pending" && (
                   <div className="mt-4 flex justify-end space-x-3">
                     <button
                       onClick={() => handleCancel(appointment.id)}

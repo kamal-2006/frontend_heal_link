@@ -329,7 +329,7 @@ export default function DoctorAppointments() {
                       >
                         View
                       </button>
-                      {appointment.status === "upcoming" && (
+                      {appointment.status === "pending" && (
                         <button
                           onClick={() =>
                             handleStatusChange(appointment.id, "cancelled")
@@ -451,15 +451,15 @@ export default function DoctorAppointments() {
                   Close
                 </button>
 
-                {selectedAppointment.status === "upcoming" && (
+                {selectedAppointment.status === "pending" && (
                   <>
                     <button
                       onClick={() =>
-                        handleStatusChange(selectedAppointment.id, "completed")
+                        handleStatusChange(selectedAppointment.id, "confirmed")
                       }
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
                     >
-                      Mark as Completed
+                      Confirm Appointment
                     </button>
                     <button
                       onClick={() =>
@@ -470,6 +470,17 @@ export default function DoctorAppointments() {
                       Cancel Appointment
                     </button>
                   </>
+                )}
+                
+                {selectedAppointment.status === "confirmed" && (
+                  <button
+                    onClick={() =>
+                      handleStatusChange(selectedAppointment.id, "completed")
+                    }
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
+                  >
+                    Mark as Completed
+                  </button>
                 )}
 
                 {selectedAppointment.status === "cancelled" && (

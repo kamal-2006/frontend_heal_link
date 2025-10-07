@@ -309,9 +309,9 @@ export default function PatientLayout({ children }) {
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-72 rounded-lg shadow-lg bg-white border border-gray-200 z-50">
                     {/* User Info Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-100 to-purple-100">
                       <div className="flex items-center">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg mr-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg mr-4 shadow-md">
                           {patient?.user ? (
                             `${patient.user.firstName.charAt(0)}${patient.user.lastName.charAt(0)}`
                           ) : (
@@ -326,7 +326,7 @@ export default function PatientLayout({ children }) {
                               </p>
                               <p className="text-sm text-gray-500">{patient.user.email}</p>
                               {patient.patientId && (
-                                <p className="text-xs text-blue-600 font-medium">ID: {patient.patientId}</p>
+                                <p className="text-xs text-purple-600 font-medium">ID: {patient.patientId}</p>
                               )}
                             </>
                           ) : (

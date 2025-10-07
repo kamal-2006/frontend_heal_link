@@ -35,15 +35,17 @@ export default function PatientDashboard() {
 
       try {
         // Fetch patient-specific data
-        const { appointmentApi, medicationApi } = await import('../../../utils/api');
-        const [appointmentsRes, medicationsRes, dashboardRes] = await Promise.all([
+        const { appointmentApi, medicationApi, reportsApi } = await import('../../../utils/api');
+        const [appointmentsRes, medicationsRes, dashboardRes, reportsRes] = await Promise.all([
           appointmentApi.getMyAppointments().catch(() => ({ data: [] })),
           medicationApi.getMyActiveMedications().catch(() => ({ data: [] })),
-          patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' }))
+          patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' })),
+          reportsApi.getMyReports().catch(() => ({ data: [] }))
         ]);
 
         setAppointments(appointmentsRes?.data || []);
         setPrescriptions(medicationsRes?.data || []);
+        setReports(reportsRes?.data || []);
 
         // dashboardRes may be { data: null, error, status } when patient not found
         if (dashboardRes && typeof dashboardRes === 'object') {
@@ -54,13 +56,6 @@ export default function PatientDashboard() {
         } else {
           setDashboardData(null);
         }
-
-        // Mock reports data for now
-        setReports([
-          { id: 1, name: 'Blood Test', date: '2023-06-15', status: 'New' },
-          { id: 2, name: 'X-Ray Report', date: '2023-06-10', status: 'Viewed' },
-          { id: 3, name: 'MRI Scan', date: '2023-05-28', status: 'New' },
-        ]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -70,6 +65,41 @@ export default function PatientDashboard() {
 
     fetchData();
   }, [router]);
+
+  // Listen for medical report changes
+  useEffect(() => {
+    const handleReportDeleted = async (event) => {
+      console.log('Report deleted:', event.detail);
+      // Refresh reports data
+      try {
+        const { reportsApi } = await import('../../../utils/api');
+        const reportsRes = await reportsApi.getMyReports();
+        setReports(reportsRes?.data || []);
+      } catch (error) {
+        console.error('Error refreshing reports:', error);
+      }
+    };
+
+    const handleReportUploaded = async (event) => {
+      console.log('Report uploaded:', event.detail);
+      // Refresh reports data
+      try {
+        const { reportsApi } = await import('../../../utils/api');
+        const reportsRes = await reportsApi.getMyReports();
+        setReports(reportsRes?.data || []);
+      } catch (error) {
+        console.error('Error refreshing reports:', error);
+      }
+    };
+
+    window.addEventListener('medicalReportDeleted', handleReportDeleted);
+    window.addEventListener('medicalReportUploaded', handleReportUploaded);
+
+    return () => {
+      window.removeEventListener('medicalReportDeleted', handleReportDeleted);
+      window.removeEventListener('medicalReportUploaded', handleReportUploaded);
+    };
+  }, []);
 
   const handleCancelAppointment = async (appointmentId) => {
     const appointment = appointments.find(apt => apt._id === appointmentId);
@@ -156,8 +186,8 @@ export default function PatientDashboard() {
   // Get active medications count
   const activeMedications = prescriptions || [];
 
-  // Count unread reports
-  const unreadReportsCount = reports.filter(report => report.status === 'New').length;
+  // Count unread reports (adjust for real data structure)
+  const unreadReportsCount = reports.filter(report => report.status === 'new').length;
 
   return (
     <div className="space-y-4">
@@ -366,7 +396,7 @@ export default function PatientDashboard() {
                         ? 'Completed'
                         : 'Scheduled'}
                     </span>
-                    {(getActualAppointmentStatus(appointment) === 'confirmed' || getActualAppointmentStatus(appointment) === 'pending') && 
+                    {getActualAppointmentStatus(appointment) === 'pending' && 
                      new Date(appointment.date) > new Date() && (
                       <button
                         onClick={() => handleCancelAppointment(appointment._id)}
