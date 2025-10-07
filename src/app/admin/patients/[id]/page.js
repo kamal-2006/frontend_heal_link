@@ -10,6 +10,20 @@ export default function PatientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    bloodType: '',
+    address: '',
+    emergencyContact: '',
+    medicalHistory: '',
+    profilePicture: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // Toast notification function
   const showSuccess = (message) => {
@@ -17,6 +31,111 @@ export default function PatientDetailPage() {
     setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
     }, 3000);
+  };
+
+  const showError = (message) => {
+    setToast({ show: true, message, type: 'error' });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'error' });
+    }, 3000);
+  };
+
+  // Open edit modal and populate form data
+  const handleEditPatient = () => {
+    if (patient) {
+      setEditFormData({
+        firstName: patient.user?.firstName || '',
+        lastName: patient.user?.lastName || '',
+        email: patient.user?.email || '',
+        phone: patient.user?.phone || '',
+        dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
+        bloodType: patient.bloodType || '',
+        address: (typeof patient.address === 'string' ? patient.address : patient.address?.street ? `${patient.address.street}, ${patient.address.city}, ${patient.address.state} ${patient.address.zipCode}` : '') || '',
+        emergencyContact: (typeof patient.emergencyContact === 'string' ? patient.emergencyContact : patient.emergencyContact?.name ? `${patient.emergencyContact.name} ${patient.emergencyContact.phone}`.trim() : '') || '',
+        medicalHistory: patient.medicalHistory || '',
+        profilePicture: patient.user?.profilePicture || ''
+      });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle profile picture file upload
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showError('Profile picture must be less than 5MB');
+        return;
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        showError('Please select a valid image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setEditFormData(prev => ({
+          ...prev,
+          profilePicture: e.target.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Save patient changes
+  const handleSavePatient = async () => {
+    try {
+      setIsSaving(true);
+      
+      const response = await fetch(`http://localhost:5000/api/v1/patients/admin/patients/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: editFormData.firstName,
+          lastName: editFormData.lastName,
+          email: editFormData.email,
+          phone: editFormData.phone,
+          dateOfBirth: editFormData.dateOfBirth,
+          bloodType: editFormData.bloodType,
+          address: editFormData.address,
+          emergencyContact: editFormData.emergencyContact,
+          medicalHistory: editFormData.medicalHistory,
+          profilePicture: editFormData.profilePicture
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update patient');
+      }
+
+      const result = await response.json();
+      
+      // Update local patient data
+      setPatient(result.data);
+      setIsEditModalOpen(false);
+      showSuccess('Patient information updated successfully');
+      
+    } catch (err) {
+      console.error('Error updating patient:', err);
+      showError('Failed to update patient information');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -130,7 +249,7 @@ export default function PatientDetailPage() {
             </div>
             <div className="flex space-x-3">
               <button 
-                onClick={() => showSuccess('Edit patient functionality available for admin')}
+                onClick={handleEditPatient}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Edit Patient
@@ -140,8 +259,23 @@ export default function PatientDetailPage() {
 
           {/* Patient Header */}
           <div className="flex items-center space-x-6">
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-              {getInitials(patient.user ? `${patient.user.firstName} ${patient.user.lastName}` : 'Unknown Patient')}
+            <div className="w-20 h-20 rounded-full overflow-hidden shadow-lg">
+              {patient.user?.profilePicture ? (
+                <img 
+                  src={patient.user.profilePicture} 
+                  alt={`${patient.user.firstName} ${patient.user.lastName}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div 
+                className={`w-full h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold ${patient.user?.profilePicture ? 'hidden' : ''}`}
+              >
+                {getInitials(patient.user ? `${patient.user.firstName} ${patient.user.lastName}` : 'Unknown Patient')}
+              </div>
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">{patient.user ? `${patient.user.firstName} ${patient.user.lastName}` : 'Unknown Patient'}</h1>
@@ -204,8 +338,13 @@ export default function PatientDetailPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Address</label>
                   <p className="text-gray-800">
-                    {patient.address && patient.address.street 
-                      ? `${patient.address.street}, ${patient.address.city}, ${patient.address.state} ${patient.address.zipCode}` 
+                    {patient.address 
+                      ? (typeof patient.address === 'string' 
+                          ? patient.address 
+                          : patient.address.street 
+                            ? `${patient.address.street}, ${patient.address.city}, ${patient.address.state} ${patient.address.zipCode}` 
+                            : 'Not provided'
+                        )
                       : 'Not provided'
                     }
                   </p>
@@ -213,9 +352,12 @@ export default function PatientDetailPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Emergency Contact</label>
                   <p className="text-gray-800">
-                    {patient.emergencyContact && typeof patient.emergencyContact === 'object' 
-                      ? `${patient.emergencyContact.name || ''} ${patient.emergencyContact.phone || ''}`.trim() || 'Not provided'
-                      : patient.emergencyContact || 'Not provided'
+                    {patient.emergencyContact 
+                      ? (typeof patient.emergencyContact === 'object' 
+                          ? `${patient.emergencyContact.name || ''} ${patient.emergencyContact.phone || ''}`.trim() || 'Not provided'
+                          : patient.emergencyContact
+                        )
+                      : 'Not provided'
                     }
                   </p>
                 </div>
@@ -376,6 +518,213 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Patient Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Edit Patient Information</h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Profile Picture */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {editFormData.profilePicture ? (
+                        <img 
+                          src={editFormData.profilePicture} 
+                          alt="Profile preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {getInitials(`${editFormData.firstName} ${editFormData.lastName}`)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        id="profilePicture"
+                        accept="image/*"
+                        onChange={handleProfilePictureChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Max file size: 5MB. Supported formats: JPG, PNG, GIF</p>
+                    </div>
+                    {editFormData.profilePicture && (
+                      <button
+                        type="button"
+                        onClick={() => setEditFormData(prev => ({ ...prev, profilePicture: '' }))}
+                        className="text-red-600 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* First Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={editFormData.firstName}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter first name"
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={editFormData.lastName}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={editFormData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={editFormData.dateOfBirth}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Blood Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Blood Type</label>
+                  <select
+                    name="bloodType"
+                    value={editFormData.bloodType}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select blood type</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+
+                {/* Emergency Contact */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                  <input
+                    type="text"
+                    name="emergencyContact"
+                    value={editFormData.emergencyContact}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter emergency contact information"
+                  />
+                </div>
+
+                {/* Address */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea
+                    name="address"
+                    value={editFormData.address}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter complete address"
+                  />
+                </div>
+
+                {/* Medical History */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
+                  <textarea
+                    name="medicalHistory"
+                    value={editFormData.medicalHistory}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter medical history notes"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-end mt-6">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePatient}
+                disabled={isSaving}
+                className={`px-4 py-2 text-base font-medium rounded-md focus:outline-none focus:ring-2 ${
+                  isSaving
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+                }`}
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
