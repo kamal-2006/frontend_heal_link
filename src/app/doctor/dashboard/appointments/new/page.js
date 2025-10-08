@@ -12,6 +12,7 @@ export default function NewAppointment() {
     patient: "",
     date: "",
     reason: "",
+    notes: "",
   });
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +58,7 @@ export default function NewAppointment() {
         patient: formData.patient, // This is the patient's user ID
         date: formData.date,
         reason: formData.reason || "General consultation",
+        notes: formData.notes,
         // Note: Doctor bookings are automatically confirmed by backend
       };
 
@@ -108,12 +110,14 @@ export default function NewAppointment() {
                 <option value="" disabled>
                   Select a patient
                 </option>
-                {patients.map((patient) => (
-                  <option key={patient._id} value={patient.user._id}>
-                    {patient.user.firstName} {patient.user.lastName} -{" "}
-                    {patient.user.email}
-                  </option>
-                ))}
+                {patients
+                  .filter((patient) => patient.user)
+                  .map((patient) => (
+                    <option key={patient._id} value={patient.user._id}>
+                      {patient.user.firstName} {patient.user.lastName} -{" "}
+                      {patient.user.email}
+                    </option>
+                  ))}
               </select>
             )}
           </div>
@@ -132,6 +136,24 @@ export default function NewAppointment() {
               onChange={handleInputChange}
               rows={3}
               placeholder="Enter reason for appointment"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="notes"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Notes
+            </label>
+            <textarea
+              id="notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows={3}
+              placeholder="Enter any additional notes"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             />
           </div>
