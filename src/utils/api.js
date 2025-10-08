@@ -18,6 +18,11 @@ const apiRequest = async (endpoint, options = {}) => {
       ...options,
     });
 
+    // Network error handling
+    if (!response) {
+      throw new Error("Network error: No response received");
+    }
+
     let data = null;
 
     // Only try to parse JSON if response has content
@@ -53,6 +58,13 @@ const apiRequest = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
+    // Provide a clearer error message for network errors
+    if (error.name === "TypeError" && error.message === "Failed to fetch") {
+      console.error("API Error: Network error or server is unreachable");
+      throw new Error(
+        "Network error: Unable to reach the server. Please check your connection or server status."
+      );
+    }
     console.error("API Error:", error);
     throw error;
   }
@@ -201,11 +213,15 @@ export const appointmentApi = {
   },
 
   // Book new appointment
-  bookAppointment: (appointmentData) =>
-    apiRequest("/appointments/book", {
+  bookAppointment: (appointmentData) => {
+    // Ensure doctor and patient IDs are sent correctly
+    // doctor: current user (doctor), patient: selected patient
+    // appointmentData should include patient, date, reason, notes
+    return apiRequest("/appointments/book", {
       method: "POST",
       body: JSON.stringify(appointmentData),
-    }),
+    });
+  },
 
   // Cancel appointment
   cancelAppointment: (id, data = {}) =>
