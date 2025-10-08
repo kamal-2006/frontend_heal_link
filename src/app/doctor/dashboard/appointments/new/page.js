@@ -67,6 +67,11 @@ export default function NewAppointment() {
       console.log("Appointment response:", response);
 
       if (response.success) {
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('appointmentBooked', { 
+          detail: response.data 
+        }));
+        
         alert("Appointment created successfully!");
         router.push("/doctor/dashboard/appointments");
       } else {

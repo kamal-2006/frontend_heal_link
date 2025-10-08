@@ -61,6 +61,11 @@ export default function DoctorBookPage() {
         text: "Appointment booked successfully!" 
       });
       
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('appointmentBooked', { 
+        detail: response.data 
+      }));
+      
       setFormData({
         reason: "",
         patient: "",

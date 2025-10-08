@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { appointmentApi } from "@/utils/api";
 
 export default function PatientAppointmentsPage() {
   // State for appointments
@@ -10,64 +11,50 @@ export default function PatientAppointmentsPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  // Fetch appointments
+  // Helpers
+  const toTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const toDate = (iso) => new Date(iso).toISOString().split("T")[0];
+  const computeStatus = (apt) => {
+    const now = new Date();
+    const when = new Date(apt.date);
+    if (apt.status === "cancelled") return "cancelled";
+    if (when < now) return "completed";
+    return "upcoming";
+  };
+
+  // Fetch appointments from API and map to UI shape
   useEffect(() => {
     const fetchAppointments = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        setAppointments([
-          { 
-            id: 101, 
-            doctorName: "Dr. Sarah Johnson", 
-            specialty: "General Physician",
-            date: "2023-09-15", 
-            time: "10:00 AM",
-            status: "upcoming",
-            notificationStatus: "confirmed"
-          },
-          { 
-            id: 102, 
-            doctorName: "Dr. Michael Chen", 
-            specialty: "Cardiologist",
-            date: "2023-09-20", 
-            time: "2:30 PM",
-            status: "upcoming",
-            notificationStatus: "doctor_changed",
-            previousDoctor: "Dr. Robert Wilson"
-          },
-          { 
-            id: 103, 
-            doctorName: "Dr. Emma Davis", 
-            specialty: "Dermatologist",
-            date: "2023-09-01", 
-            time: "11:15 AM",
-            status: "completed",
-            feedbackSubmitted: true
-          },
-          { 
-            id: 104, 
-            doctorName: "Dr. Lisa Thompson", 
-            specialty: "Pediatrician",
-            date: "2023-09-05", 
-            time: "9:00 AM",
-            status: "completed",
-            feedbackSubmitted: false
-          },
-          { 
-            id: 105, 
-            doctorName: "Dr. James Wilson", 
-            specialty: "Orthopedic",
-            date: "2023-08-25", 
-            time: "3:45 PM",
-            status: "cancelled",
-            cancellationReason: "Doctor unavailable"
-          },
-        ]);
+      setLoading(true);
+      try {
+        const res = await appointmentApi.getMyAppointments();
+        const apiAppointments = res?.data || [];
+        const mapped = apiAppointments.map((a) => ({
+          id: a._id,
+          doctorName: `Dr. ${a.doctor?.firstName || ""} ${a.doctor?.lastName || ""}`.trim(),
+          specialty: a.doctor?.specialty || a.reason || "",
+          date: toDate(a.date),
+          time: toTime(a.date),
+          status: computeStatus(a),
+          feedbackSubmitted: false,
+          cancellationReason: a.cancellationReason || "",
+          notificationStatus: undefined,
+          previousDoctor: undefined,
+        }));
+        setAppointments(mapped);
+      } catch (_) {
+        setAppointments([]);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     fetchAppointments();
+
+    // realtime refresh on booking
+    const onBooked = () => fetchAppointments();
+    window.addEventListener("appointmentBooked", onBooked);
+    return () => window.removeEventListener("appointmentBooked", onBooked);
   }, []);
 
   // Filter appointments based on active tab
@@ -81,25 +68,31 @@ export default function PatientAppointmentsPage() {
   // Handle cancelling an appointment
   const handleCancel = (appointmentId) => {
     setLoading(true);
-    
-    // In a real app, this would be an API call to cancel the appointment
-    setTimeout(() => {
-      setAppointments(appointments.map(app => 
-        app.id === appointmentId ? {...app, status: "cancelled", cancellationReason: "Patient cancelled"} : app
-      ));
-      
-      setMessage({
-        type: "success",
-        text: "Appointment cancelled successfully."
-      });
-      
-      setLoading(false);
-      
-      // Clear the message after 5 seconds
-      setTimeout(() => {
-        setMessage({ type: "", text: "" });
-      }, 5000);
-    }, 1000);
+    (async () => {
+      try {
+        await appointmentApi.cancelAppointment(appointmentId, { reason: "Patient cancelled" });
+        // Refetch to reflect backend truth
+        const res = await appointmentApi.getMyAppointments();
+        const apiAppointments = res?.data || [];
+        const mapped = apiAppointments.map((a) => ({
+          id: a._id,
+          doctorName: `Dr. ${a.doctor?.firstName || ""} ${a.doctor?.lastName || ""}`.trim(),
+          specialty: a.doctor?.specialty || a.reason || "",
+          date: toDate(a.date),
+          time: toTime(a.date),
+          status: computeStatus(a),
+          feedbackSubmitted: false,
+          cancellationReason: a.cancellationReason || "",
+        }));
+        setAppointments(mapped);
+        setMessage({ type: "success", text: "Appointment cancelled successfully." });
+      } catch (_) {
+        setMessage({ type: "error", text: "Failed to cancel appointment." });
+      } finally {
+        setLoading(false);
+        setTimeout(() => setMessage({ type: "", text: "" }), 5000);
+      }
+    })();
   };
 
   // Handle rescheduling an appointment (in a real app, this would navigate to a reschedule page)
