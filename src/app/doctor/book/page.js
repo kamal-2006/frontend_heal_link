@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { patientApi, appointmentApi } from '../../../../utils/api';
+import { patientApi, appointmentApi } from '@/utils/api';
 
 export default function DoctorBookPage() {
   const [formData, setFormData] = useState({

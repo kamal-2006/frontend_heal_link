@@ -1,63 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useUser from "../../../hooks/useUser";
-import { toTitleCase } from "../../../utils/text";
+import { useRouter } from 'next/navigation';
+import useUser from "@/hooks/useUser";
+import { toTitleCase } from "@/utils/text";
 import { get } from "@/utils/api";
 import Link from 'next/link';
 
+import useDoctorDashboard from '@/hooks/useDoctorDashboard';
+
 export default function DoctorDashboard() {
   const { user, loading: userLoading } = useUser();
-  const [stats, setStats] = useState({
-    appointmentsToday: 0,
-    totalPatients: 0,
-    pendingReviews: 0,
-    upcomingAppointments: [],
-  });
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Use the appointmentApi helper instead of direct get call
-        const appointmentsData = await get("/doctor/appointments");
-        const appointments = appointmentsData.data || [];
-
-        const upcomingAppointments = appointments
-          .filter(
-            (a) =>
-              new Date(a.date) >= new Date() &&
-              (a.status === "confirmed" || a.status === "pending")
-          )
-          .slice(0, 4);
-
-        setStats({
-          appointmentsToday: upcomingAppointments.length,
-          totalPatients: 0, // This will be updated later
-          pendingReviews: 0, // This will be updated later
-          upcomingAppointments: upcomingAppointments.map((a) => ({
-            id: a._id,
-            patientName: `${a.patient.firstName} ${a.patient.lastName}`,
-            time: new Date(a.date).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            type: a.status,
-          })),
-        });
-      } catch (error) {
-        // Do nothing
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+  const router = useRouter();
+  const { data: stats = {}, isLoading, isError } = useDoctorDashboard();
+  const { appointmentsToday = 0, totalPatients = 0, pendingReviews = 0, upcomingAppointments = [] } = stats;
 
   return (
     <div className="space-y-6">
@@ -125,7 +81,7 @@ export default function DoctorDashboard() {
                     Today's Appointments
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.appointmentsToday}
+                    {appointmentsToday}
                   </p>
                 </div>
               </div>
@@ -154,7 +110,7 @@ export default function DoctorDashboard() {
                     Total Patients
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.totalPatients}
+                    {totalPatients}
                   </p>
                 </div>
               </div>
@@ -183,7 +139,7 @@ export default function DoctorDashboard() {
                     Pending Reviews
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.pendingReviews}
+                    {pendingReviews}
                   </p>
                 </div>
               </div>
@@ -198,8 +154,8 @@ export default function DoctorDashboard() {
               </h3>
             </div>
             <div className="divide-y divide-gray-100">
-              {stats.upcomingAppointments.length > 0 ? (
-                stats.upcomingAppointments.map((appointment) => (
+              {upcomingAppointments.length > 0 ? (
+                upcomingAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
                     className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
@@ -250,7 +206,7 @@ export default function DoctorDashboard() {
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
               <a
-                href="/doctor/dashboard/appointments"
+                href="/doctor/appointments"
                 className="text-sm font-medium text-blue-600 hover:text-blue-800"
               >
                 View all appointments
@@ -264,7 +220,7 @@ export default function DoctorDashboard() {
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link href="/doctor/dashboard/book" className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              <Link href="/doctor/book" className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"

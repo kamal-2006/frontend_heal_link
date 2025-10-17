@@ -59,7 +59,7 @@ export default function Login() {
         if (data.role === 'admin') {
           router.push('/admin');
         } else if (data.role === 'doctor') {
-          router.push('/doctor/dashboard');
+          router.push('/doctor');
         } else if (data.role === 'patient') {
           router.push('/patient/dashboard');
         } else if (data.role === 'nurse') {
