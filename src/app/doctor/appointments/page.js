@@ -18,33 +18,79 @@ export default function DoctorAppointments() {
     const fetchAppointments = async () => {
       try {
         const data = await appointmentApi.getDoctorAppointments();
-        const formattedAppointments = data.data.map((appointment) => ({
-          id: appointment._id,
-          patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
-          patientId: appointment.patient.patientInfo
-            ? appointment.patient.patientInfo.patientId
-            : "",
-          fullDate: new Date(appointment.date),
-          date: new Date(appointment.date).toISOString().split("T")[0],
-          time: new Date(appointment.date).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          type: appointment.reason,
-          status: appointment.status,
-          notes: appointment.notes,
-          contact: appointment.patient.phone,
-          doctor: appointment.doctor,
-        }));
-        setAppointments(formattedAppointments);
+        if (data.success && data.data) {
+          const formattedAppointments = data.data.map((appointment) => ({
+            id: appointment._id,
+            patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`,
+            patientId: appointment.patient?.patientInfo?.patientId || "",
+            fullDate: new Date(appointment.date),
+            date: new Date(appointment.date).toISOString().split("T")[0],
+            time: new Date(appointment.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            type: appointment.reason,
+            status: appointment.status,
+            notes: appointment.notes,
+            contact: appointment.patient?.phone || appointment.patient?.email || '',
+            doctor: appointment.doctor,
+          }));
+          setAppointments(formattedAppointments);
+          
+          // Auto-complete appointments that are 15 minutes past scheduled time
+          const now = new Date();
+          const appointmentsToUpdate = formattedAppointments.filter(appointment => {
+            // Only check active appointments
+            if (appointment.status !== "confirmed" && 
+                appointment.status !== "scheduled" && 
+                appointment.status !== "rescheduled") {
+              return false;
+            }
+            
+            const appointmentTime = appointment.fullDate;
+            const fifteenMinutesAfter = new Date(appointmentTime);
+            fifteenMinutesAfter.setMinutes(fifteenMinutesAfter.getMinutes() + 15);
+            
+            return now > fifteenMinutesAfter;
+          });
+          
+          // Update status to completed for eligible appointments
+          if (appointmentsToUpdate.length > 0) {
+            appointmentsToUpdate.forEach(async (appointment) => {
+              try {
+                await appointmentApi.updateAppointment(appointment.id, {
+                  status: "completed"
+                });
+                console.log(`Auto-completed appointment ${appointment.id}`);
+              } catch (error) {
+                console.error(`Error auto-completing appointment ${appointment.id}:`, error);
+              }
+            });
+            
+            // Update local state
+            setAppointments(prevAppointments => 
+              prevAppointments.map(appointment => 
+                appointmentsToUpdate.some(a => a.id === appointment.id)
+                  ? { ...appointment, status: "completed" }
+                  : appointment
+              )
+            );
+          }
+        }
       } catch (error) {
-        // Do nothing
+        console.error("Error fetching appointments:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchAppointments();
+    
+    // Set up interval to check for appointments to auto-complete every minute
+    const intervalId = setInterval(fetchAppointments, 60000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const filteredAppointments = appointments.filter((appointment) => {
@@ -120,25 +166,27 @@ export default function DoctorAppointments() {
       });
 
       const data = await appointmentApi.getDoctorAppointments();
-      const formattedAppointments = data.data.map((appointment) => ({
-        id: appointment._id,
-        patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
-        patientId: appointment.patient.patientInfo
-          ? appointment.patient.patientInfo.patientId
-          : "",
-        fullDate: new Date(appointment.date),
-        date: new Date(appointment.date).toISOString().split("T")[0],
-        time: new Date(appointment.date).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        type: appointment.reason,
-        status: appointment.status,
-        notes: appointment.notes,
-        contact: appointment.patient.phone,
-        doctor: appointment.doctor,
-      }));
-      setAppointments(formattedAppointments);
+      if (data.success && data.data) {
+        const formattedAppointments = data.data.map((appointment) => ({
+          id: appointment._id,
+          patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`,
+          patientId: appointment.patient?.patientInfo
+            ? appointment.patient.patientInfo.patientId
+            : "",
+          fullDate: new Date(appointment.date),
+          date: new Date(appointment.date).toISOString().split("T")[0],
+          time: new Date(appointment.date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          type: appointment.reason,
+          status: appointment.status,
+          notes: appointment.notes,
+          contact: appointment.patient?.phone || '',
+          doctor: appointment.doctor,
+        }));
+        setAppointments(formattedAppointments);
+      }
       setEditingAppointmentId(null);
       alert("Appointment rescheduled successfully");
     } catch (error) {
@@ -159,24 +207,44 @@ export default function DoctorAppointments() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-        <button
-          onClick={() => router.push("/doctor/appointments/new")}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 flex items-center"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+        <div className="flex space-x-3">
+          <button
+            onClick={() => router.push("/doctor/bulk-swap")}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150 flex items-center"
           >
-            <path
-              fillRule="evenodd"
-              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          New Appointment
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-2"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Bulk Swap
+          </button>
+          <button
+            onClick={() => router.push("/doctor/appointments/new")}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 flex items-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-2"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            New Appointment
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

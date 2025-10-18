@@ -75,7 +75,7 @@ export default function NewAppointment() {
         }));
         
         alert("Appointment created successfully!");
-        router.push("/doctor/dashboard/appointments");
+        router.push("/doctor/appointments");
       } else {
         alert(response.error || "Something went wrong");
       }

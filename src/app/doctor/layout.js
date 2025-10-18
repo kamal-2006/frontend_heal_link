@@ -15,20 +15,6 @@ export default function DoctorDashboardLayout({ children }) {
   const { doctor, loading: doctorLoading } = useDoctor();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -47,8 +33,7 @@ export default function DoctorDashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation - Fixed */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${scrolled ? "bg-white shadow-lg border-b border-gray-200" : "bg-white"}`}>
+      <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -170,7 +155,9 @@ export default function DoctorDashboardLayout({ children }) {
                           {toTitleCase(user?.lastName)}
                         </span>
                         <span className="block text-xs text-gray-500">
-                          {doctor?.specialization || "General Practitioner"}
+                          {user?.specialty ||
+                            user?.specialization ||
+                            "General Practitioner"}
                         </span>
                       </div>
                       <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-md overflow-hidden">
@@ -324,15 +311,13 @@ export default function DoctorDashboardLayout({ children }) {
           } md:block md:w-64 bg-white shadow-lg h-[calc(100vh-4rem)] fixed overflow-y-auto z-10 transition-all duration-300`}
         >
           <div className="p-4">
-            <nav className="space-y-2">
-              <Link
-                href="/doctor/dashboard"
-                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
-                  ""
-                )}`}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="md:hidden text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg
-                  className="mr-3 h-5 w-5"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -341,8 +326,26 @@ export default function DoctorDashboardLayout({ children }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    d="M6 18L18 6M6 6l12 12"
                   />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="space-y-2">
+              <Link
+                href="/doctor/dashboard"
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
+                  ""
+                )}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-3 h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                 </svg>
                 Dashboard
               </Link>
@@ -354,19 +357,39 @@ export default function DoctorDashboardLayout({ children }) {
                 )}`}
               >
                 <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   className="mr-3 h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
                 >
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    fillRule="evenodd"
+                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                    clipRule="evenodd"
                   />
                 </svg>
                 Appointments
+              </Link>
+
+              <Link
+                href="/doctor/bulk-swap"
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
+                  "/bulk-swap"
+                )}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-3 h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Bulk Swap
               </Link>
 
               <Link
@@ -376,21 +399,74 @@ export default function DoctorDashboardLayout({ children }) {
                 )}`}
               >
                 <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   className="mr-3 h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
                 >
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    fillRule="evenodd"
+                    d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"
+                    clipRule="evenodd"
                   />
                 </svg>
                 Feedback
               </Link>
+
+              <Link
+                href="/doctor/patients"
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
+                  "/patients"
+                )}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-3 h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                </svg>
+                Patients
+              </Link>
             </nav>
+
+            <div className="mt-10 pt-6 border-t border-gray-100">
+              <div className="rounded-lg bg-blue-50 p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 p-2 rounded-md bg-blue-600">
+                    <svg
+                      className="h-6 w-6 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Need Help?
+                    </h3>
+                    <p className="mt-1 text-xs text-blue-700">
+                      Check our documentation or contact support.
+                    </p>
+                    <Link
+                      href="/support"
+                      className="mt-2 block text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      Get Support →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         {/* Main Content */}

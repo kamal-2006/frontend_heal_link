@@ -51,7 +51,9 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         localStorage.removeItem("user");
 
         // Redirect to login if not authorized
-        if (window.location.pathname.includes("/admin")) {
+        if (window.location.pathname.includes("/admin") || 
+            window.location.pathname.includes("/doctor") || 
+            window.location.pathname.includes("/patient")) {
           window.location.href = "/login";
         }
       }
@@ -213,8 +215,13 @@ export const appointmentApi = {
   getMyAppointments: () => apiRequest("/appointments"),
 
   // Get doctor appointments - use the correct endpoint
-  getDoctorAppointments: () => {
-    return apiRequest("/doctor/appointments");
+  getDoctorAppointments: async () => {
+    try {
+      return await apiRequest("/doctor/appointments");
+    } catch (error) {
+      console.error("Error fetching doctor appointments:", error);
+      return { success: false, error: error.message, data: [] };
+    }
   },
 
   // Get all appointments (for the current user based on role)

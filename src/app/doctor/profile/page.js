@@ -193,7 +193,8 @@ export default function DoctorProfilePage() {
                   activeTab === "availability"
                     ? "border-b-2 border-blue-600 text-blue-600"
                     : "text-gray-500"
-                }`}>
+                }`}
+             >
                 Availability
               </button>
               <button
@@ -383,22 +384,22 @@ export default function DoctorProfilePage() {
                       <p className="text-sm font-medium text-gray-500">
                         First Name
                       </p>
-                      <p className="mt-1">{doctor?.user?.firstName || "N/A"}</p>
+                      {doctor && <p className="mt-1">{doctor.user?.firstName || "N/A"}</p>}
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Last Name
                       </p>
-                      <p className="mt-1">{doctor?.user?.lastName || "N/A"}</p>
+                      <p className="mt-1">{doctor.user?.lastName || "N/A"}</p>
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Display Name
                       </p>
-                      <p className="mt-1">{`${doctor?.user?.firstName || ""} ${
-                        doctor?.user?.lastName || ""
+                      <p className="mt-1">{`${doctor.user?.firstName || ""} ${
+                        doctor.user?.lastName || ""
                       }`}</p>
                     </div>
 
@@ -406,41 +407,41 @@ export default function DoctorProfilePage() {
                       <p className="text-sm font-medium text-gray-500">
                         Gender
                       </p>
-                      <p className="mt-1">{doctor?.gender || "N/A"}</p>
+                      <p className="mt-1">{doctor.gender || "N/A"}</p>
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Designation
                       </p>
-                      <p className="mt-1">{doctor?.specialization || "N/A"}</p>
+                      <p className="mt-1">{doctor.specialization || "N/A"}</p>
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Mobile Number
                       </p>
-                      <p className="mt-1">{doctor?.user?.phone || "N/A"}</p>
+                      <p className="mt-1">{doctor.user?.phone || "N/A"}</p>
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Doctor ID
                       </p>
-                      <p className="mt-1">{doctor?.doctorId || "N/A"}</p>
+                      <p className="mt-1">{doctor.doctorId || "N/A"}</p>
                     </div>
 
                     <div>
                       <p className="text-sm font-medium text-gray-500">
                         Years of Experience
                       </p>
-                      <p className="mt-1">{doctor?.experience || "N/A"}</p>
+                      <p className="mt-1">{doctor.experience || "N/A"}</p>
                     </div>
 
                     <div className="col-span-full">
                       <p className="text-sm font-medium text-gray-500">About</p>
                       <p className="mt-1">
-                        {doctor?.about || "No information provided."}
+                        {doctor.about || "No information provided."}
                       </p>
                     </div>
                   </div>
@@ -497,7 +498,7 @@ export default function DoctorProfilePage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {doctor?.availability?.days.length > 0 ? (
+                        {doctor.availability?.days.length > 0 ? (
                           doctor.availability?.days.map((day) => (
                             <span
                               key={day}
@@ -605,7 +606,7 @@ export default function DoctorProfilePage() {
                     </div>
                   ) : (
                     <div>
-                      {doctor?.availability?.timeSlots.length > 0 ? (
+                      {doctor.availability?.timeSlots.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                           {doctor.availability.timeSlots.map((slot, index) => (
                             <div
@@ -630,14 +631,14 @@ export default function DoctorProfilePage() {
                 <div>
                   <h3 className="font-medium text-gray-700 mb-2">Qualification</h3>
                   <p>
-                    {doctor?.qualification || "No qualification information available"}
+                    {doctor.qualification || "No qualification information available"}
                   </p>
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-700 mb-2">Awards</h3>
-                  {doctor?.awards?.length > 0 ? (
+                  {doctor.awards?.length > 0 ? (
                     <ul className="space-y-1">
-                      {doctor?.awards.map((award, index) => (
+                      {doctor.awards.map((award, index) => (
                         <li key={index}>{award}</li>
                       ))}
                     </ul>
