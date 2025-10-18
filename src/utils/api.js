@@ -2,19 +2,22 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 // Helper function to get auth headers
-const getAuthHeaders = () => {
+const getAuthHeaders = (isFormData = false) => {
   const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
+  const headers = {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  return headers;
 };
 
 // Generic API request function
-const apiRequest = async (endpoint, options = {}) => {
+const apiRequest = async (endpoint, options = {}, isFormData = false) => {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(isFormData),
       ...options,
     });
 
@@ -37,6 +40,7 @@ const apiRequest = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
+      console.log(response);
       // Handle authorization errors specially
       if (response.status === 401 || response.status === 403) {
         const errorMessage = data?.error || "Authentication failed";
@@ -78,11 +82,15 @@ export const post = (endpoint, body) =>
     body: JSON.stringify(body),
   });
 
-export const put = (endpoint, body) =>
-  apiRequest(endpoint, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
+export const put = (endpoint, body, isFormData = false) =>
+  apiRequest(
+    endpoint,
+    {
+      method: "PUT",
+      body: isFormData ? body : JSON.stringify(body),
+    },
+    isFormData
+  );
 
 export const del = (endpoint) =>
   apiRequest(endpoint, {
@@ -165,6 +173,12 @@ export const authApi = {
 
 // Doctor API functions
 export const doctorApi = {
+  // Get current doctor profile
+  getMyProfile: () => apiRequest("/doctors/me"),
+
+  // Update current doctor profile
+  updateMyProfile: (profileData) => put("/doctors/me", profileData, true),
+
   // Get all doctors
   getDoctors: () => apiRequest("/doctors"),
 

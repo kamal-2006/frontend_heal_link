@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { patientApi, appointmentApi } from "@/utils/api";
-import useUser from "../../../../../hooks/useUser";
+import useUser from "../../../../hooks/useUser";
 
 export default function NewAppointment() {
   const router = useRouter();
