@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import useNurse from '../../hooks/useNurse';
 
 export default function NurseLayout({ children }) {
@@ -134,15 +135,6 @@ export default function NurseLayout({ children }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       )
-    },
-    {
-      name: 'Notifications',
-      href: '/nurse/notifications',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      )
     }
   ];
 
@@ -163,8 +155,8 @@ export default function NurseLayout({ children }) {
                 </svg>
               </button>
 
-              {/* Logo */}
-              <div className="flex items-center space-x-2">
+              {/* Logo - positioned where sidebar body splits, moved right */}
+              <div className="flex items-center space-x-2 md:ml-8">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -300,21 +292,23 @@ export default function NurseLayout({ children }) {
               ))}
             </div>
           </nav>
-
-          {/* Nurse Info Card */}
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          
+          <div className="p-4 border-t border-gray-200">
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-blue-100 rounded-md p-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-blue-800 truncate">{nurseInfo.id}</p>
-                  <p className="text-xs text-blue-600 truncate">{nurseInfo.department}</p>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">Need help?</h3>
+                  <p className="text-xs text-blue-600 mt-1">Contact our support team</p>
                 </div>
               </div>
+              <Link href="/nurse/support" className="mt-2 block text-center text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-md transition-colors">
+                Get Support
+              </Link>
             </div>
           </div>
         </aside>

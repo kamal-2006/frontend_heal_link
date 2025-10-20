@@ -1,5 +1,6 @@
+'use client';
+
 import useSWR from 'swr';
-import { patientApi, appointmentApi, medicationApi } from '../utils/api';
 
 const fetcher = async (url) => {
     const token = localStorage.getItem('token');
@@ -18,8 +19,8 @@ const fetcher = async (url) => {
     return data;
 };
 
-export default function usePatientDashboard(refreshKey = 0) {
-    const { data, error, mutate } = useSWR(['/patients/dashboard-data', refreshKey], ([url]) => fetcher(url));
+const useNurseDashboard = (refreshKey = 0) => {
+    const { data, error, mutate } = useSWR(['/nurse/dashboard-data', refreshKey], ([url]) => fetcher(url));
 
     return {
         data,
@@ -27,4 +28,6 @@ export default function usePatientDashboard(refreshKey = 0) {
         isError: error,
         refresh: mutate
     };
-}
+};
+
+export default useNurseDashboard;

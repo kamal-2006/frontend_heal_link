@@ -185,7 +185,7 @@ export default function FeedbackPage() {
 
   // Check if feedback already submitted for appointment
   const isFeedbackSubmitted = (appointmentId) => {
-    return feedbackHistory.some(feedback => feedback.appointment._id === appointmentId);
+    return feedbackHistory.some(feedback => feedback.appointment?._id === appointmentId);
   };
 
   // Filter appointments based on active filter
@@ -471,11 +471,11 @@ export default function FeedbackPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{formatDate(appointment.appointmentDate)}</div>
+                          <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {appointment.appointmentType}
+                            {appointment.reason || 'General Consultation'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -539,7 +539,7 @@ export default function FeedbackPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {feedback.appointment.appointmentType}
+                            {feedback.appointment?.reason || 'General Consultation'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

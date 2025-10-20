@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function useNurse() {
+const useNurse = () => {
   const [nurse, setNurse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,4 +54,6 @@ export default function useNurse() {
   }, []);
 
   return { nurse, loading, error };
-}
+};
+
+export default useNurse;

@@ -12,9 +12,33 @@ import usePatientDashboard from '../../../hooks/usePatientDashboard';
 
 export default function PatientDashboard() {
   const router = useRouter();
-  const { data, isLoading, isError } = usePatientDashboard();
-  const { appointments, prescriptions, reports, notifications, dashboardData } = data || {};
+  
+  // State for refreshing data
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { data, isLoading, isError, refresh } = usePatientDashboard(refreshKey);
+  const { appointments: hookAppointments, prescriptions, reports: hookReports, notifications, dashboardData } = data || {};
   const { patient, loading: patientLoading, error: patientError } = usePatient();
+
+  // State for cancel appointment modal
+  const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showReasonDialog, setShowReasonDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const [reports, setReports] = useState(hookReports || []);
+  const [appointments, setAppointments] = useState(hookAppointments || []);
+
+  // Update local state when hook data changes
+  useEffect(() => {
+    if (hookAppointments) {
+      setAppointments(hookAppointments);
+    }
+    if (hookReports) {
+      setReports(hookReports);
+    }
+  }, [hookAppointments, hookReports]);
 
   // Listen for medical report changes
   useEffect(() => {
@@ -44,8 +68,9 @@ export default function PatientDashboard() {
 
     const handleAppointmentBooked = async (event) => {
       console.log('🎉 Appointment booked event received in dashboard:', event.detail);
-      // Trigger full refresh
-      console.log('� Triggering full dashboard refresh...');
+      // Trigger full refresh using SWR mutate
+      console.log('🔄 Triggering full dashboard refresh...');
+      await refresh();
       setRefreshKey(prev => prev + 1);
     };
 
@@ -61,7 +86,7 @@ export default function PatientDashboard() {
   }, []);
 
   const handleCancelAppointment = async (appointmentId) => {
-    const appointment = appointments.find(apt => apt._id === appointmentId);
+    const appointment = (appointments || []).find(apt => apt._id === appointmentId);
     setAppointmentToCancel(appointment);
     setCancellationReason('');
     setShowReasonDialog(true);
@@ -130,7 +155,7 @@ export default function PatientDashboard() {
   };
 
   // Get upcoming appointments (max 3) - latest booked first
-  const upcomingAppointments = appointments
+  const upcomingAppointments = (appointments || [])
     .filter(app => {
       const appointmentDate = new Date(app.date);
       const now = new Date();
@@ -146,7 +171,7 @@ export default function PatientDashboard() {
   const activeMedications = prescriptions || [];
 
   // Count unread reports (adjust for real data structure)
-  const unreadReportsCount = reports.filter(report => report.status === 'new').length;
+  const unreadReportsCount = (reports || []).filter(report => report.status === 'new').length;
 
   return (
     <div className="space-y-4">
@@ -310,7 +335,7 @@ export default function PatientDashboard() {
             <h3 className="text-lg font-medium text-gray-900">Recent Notifications</h3>
           </div>
           <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
-            {notifications.slice(0, 5).map((notification, index) => (
+            {(notifications || []).slice(0, 5).map((notification, index) => (
               <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start space-x-3">
                   <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
