@@ -77,9 +77,7 @@ export default function DoctorDashboard() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h2 className="text-sm font-medium text-gray-500">
-                    Today's Appointments
-                  </h2>
+                  <h2 className="text-sm font-medium text-gray-500">Today&apos;s Appointments</h2>
                   <p className="text-3xl font-bold text-gray-900">
                     {appointmentsToday}
                   </p>

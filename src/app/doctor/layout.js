@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import useUser from "@/hooks/useUser";
+import useDoctor from "@/hooks/useDoctor";
 import { toTitleCase } from "@/utils/text";
 
 export default function DoctorDashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, setUser } = useUser();
+  const { user, loading: userLoading, setUser } = useUser();
+  const { doctor, loading: doctorLoading } = useDoctor();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -20,8 +22,12 @@ export default function DoctorDashboardLayout({ children }) {
     router.push("/login");
   };
 
+  const loading = userLoading || doctorLoading;
+
   const isActive = (path) => {
-    return pathname === `/doctor${path}`;
+    return pathname === `/doctor/dashboard${path}`
+      ? "bg-blue-100 text-blue-700"
+      : "text-gray-600 hover:bg-blue-50 hover:text-blue-600";
   };
 
   return (
@@ -101,6 +107,7 @@ export default function DoctorDashboardLayout({ children }) {
                   </svg>
                 </button>
 
+                {/* Notification Dropdown */}
                 {isNotificationOpen && (
                   <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 transform transition-all duration-200">
                     <div className="p-4">
@@ -153,39 +160,60 @@ export default function DoctorDashboardLayout({ children }) {
                             "General Practitioner"}
                         </span>
                       </div>
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-md">
-                        <span className="text-sm font-medium">
-                          {toTitleCase(user?.firstName?.[0])}
-                          {toTitleCase(user?.lastName?.[0])}
-                        </span>
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-md overflow-hidden">
+                        {user?.profilePicture ? (
+                          <img
+                            src={`http://localhost:5000/${user.profilePicture}`}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">
+                            {toTitleCase(user?.firstName?.[0])}
+                            {toTitleCase(user?.lastName?.[0])}
+                          </span>
+                        )}
                       </div>
                     </>
                   )}
                 </button>
 
                 {isProfileOpen && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-30 overflow-hidden transform transition-all duration-200">
+                  <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-xl shadow-xl bg-white ring-1 ring-gray-200 z-30 overflow-hidden transform transition-all duration-200">
                     {!loading && user && (
-                      <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                        <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 rounded-full bg-white text-blue-600 flex items-center justify-center text-lg font-semibold">
-                            {toTitleCase(user?.firstName?.[0])}
-                            {toTitleCase(user?.lastName?.[0])}
+                      <div className="p-5 bg-gradient-to-br from-blue-50 to-purple-50 border-b border-gray-100">
+                        <div className="flex items-start gap-4">
+                          <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-md flex-shrink-0 overflow-hidden">
+                            {user?.profilePicture ? (
+                              <img
+                                src={`http://localhost:5000/${user.profilePicture}`}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <>
+                                {toTitleCase(user?.firstName?.[0])}
+                                {toTitleCase(user?.lastName?.[0])}
+                              </>
+                            )}
                           </div>
-                          <div>
-                            <p className="font-medium">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-base truncate">
                               Dr. {toTitleCase(user?.firstName)}{" "}
                               {toTitleCase(user?.lastName)}
                             </p>
-                            <p className="text-xs text-blue-100">
+                            <p className="text-sm text-gray-600 truncate mt-0.5">
                               {user?.email || "doctor@heallink.com"}
+                            </p>
+                            <p className="text-sm font-medium text-purple-600 mt-1">
+                              ID: {doctor?.doctorId || "N/A"}
                             </p>
                           </div>
                         </div>
                       </div>
                     )}
                     <div
-                      className="py-1"
+                      className="py-2"
                       role="menu"
                       aria-orientation="vertical"
                       aria-labelledby="user-menu"
@@ -193,11 +221,11 @@ export default function DoctorDashboardLayout({ children }) {
                       <Link
                         href="/doctor/profile"
                         onClick={() => setIsProfileOpen(false)}
-                        className="group flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150"
+                        className="group flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                         role="menuitem"
                       >
                         <svg
-                          className="mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-500"
+                          className="mr-3 h-5 w-5 text-gray-400"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -212,16 +240,44 @@ export default function DoctorDashboardLayout({ children }) {
                         </svg>
                         View Profile
                       </Link>
+                      <Link
+                        href="/doctor/settings"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="group flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                        role="menuitem"
+                      >
+                        <svg
+                          className="mr-3 h-5 w-5 text-gray-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        Settings
+                      </Link>
                       <button
                         onClick={() => {
                           handleLogout();
                           setIsProfileOpen(false);
                         }}
-                        className="group flex w-full items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-150"
+                        className="group flex w-full items-center px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
                         role="menuitem"
                       >
                         <svg
-                          className="mr-3 h-5 w-5 text-red-400 group-hover:text-red-500"
+                          className="mr-3 h-5 w-5 text-red-500"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -234,7 +290,7 @@ export default function DoctorDashboardLayout({ children }) {
                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                           />
                         </svg>
-                        Sign Out
+                        Sign out
                       </button>
                     </div>
                   </div>
@@ -247,40 +303,38 @@ export default function DoctorDashboardLayout({ children }) {
 
       <div className="flex pt-16">
         {" "}
+        {/* Added padding top to account for fixed navbar */}
         {/* Sidebar */}
         <div
-          className={`${isSidebarOpen ? "block" : "hidden"
-            } md:block md:w-64 bg-white shadow-lg h-[calc(100vh-4rem)] fixed overflow-y-auto z-10 transition-all duration-300`}
+          className={`${
+            isSidebarOpen ? "block" : "hidden"
+          } md:block md:w-64 bg-white shadow-lg h-[calc(100vh-4rem)] fixed overflow-y-auto z-10 transition-all duration-300`}
         >
           <div className="p-4">
-            <div className="mb-6 pb-4 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                  Main Menu
-                </h2>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="md:hidden text-gray-400 hover:text-gray-600 transition-colors"
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="md:hidden text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
+
             <nav className="space-y-2">
               <Link
-                href="/doctor"
+                href="/doctor/dashboard"
                 className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
                   ""
                 )}`}
@@ -315,6 +369,27 @@ export default function DoctorDashboardLayout({ children }) {
                   />
                 </svg>
                 Appointments
+              </Link>
+
+              <Link
+                href="/doctor/bulk-swap"
+                className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(
+                  "/bulk-swap"
+                )}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-3 h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Bulk Swap
               </Link>
 
               <Link
@@ -396,8 +471,9 @@ export default function DoctorDashboardLayout({ children }) {
         </div>
         {/* Main Content */}
         <main
-          className={`flex-1 ${isSidebarOpen ? "md:ml-64" : ""
-            } p-6 transition-all duration-300`}
+          className={`flex-1 ${
+            isSidebarOpen ? "md:ml-64" : ""
+          } p-6 transition-all duration-300`}
         >
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             {children}

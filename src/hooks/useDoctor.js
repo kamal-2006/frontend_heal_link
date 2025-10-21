@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { doctorApi } from '@/utils/api';
+import { doctorApi } from '../utils/api';
 
 const useDoctor = () => {
   const [doctor, setDoctor] = useState(null);
