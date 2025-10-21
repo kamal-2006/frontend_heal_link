@@ -151,9 +151,11 @@ export default function DoctorAppointments() {
     setEditingAppointmentId(appointment.id);
     setShowActionsFor(null);
     const date = new Date(appointment.fullDate).toISOString();
+    const doctorIdToSet = availableDoctors.find(d => d.user && d.user._id === appointment.doctor)?._id || "";
+
     setRescheduleData({
       date: date.slice(0, 16),
-      doctor: appointment.doctor ? appointment.doctor._id : "",
+      doctor: doctorIdToSet,
     });
     await fetchAvailableDoctors(date, appointment.id);
   };

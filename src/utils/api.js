@@ -51,9 +51,11 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         localStorage.removeItem("user");
 
         // Redirect to login if not authorized
-        if (window.location.pathname.includes("/admin") || 
-            window.location.pathname.includes("/doctor") || 
-            window.location.pathname.includes("/patient")) {
+        if (
+          window.location.pathname.includes("/admin") ||
+          window.location.pathname.includes("/doctor") ||
+          window.location.pathname.includes("/patient")
+        ) {
           window.location.href = "/login";
         }
       }
@@ -185,7 +187,15 @@ export const doctorApi = {
   getDoctors: () => apiRequest("/doctors"),
 
   // Get available doctors for appointments
-  getAvailableDoctors: (query = "") => apiRequest(`/doctors/available${query}`),
+  getAvailableDoctors: async (filters = {}) => {
+    const qs = new URLSearchParams();
+    if (filters.date) qs.set("date", filters.date);
+    if (filters.startTime) qs.set("startTime", filters.startTime);
+    if (filters.endTime) qs.set("endTime", filters.endTime);
+
+    // Do NOT pass filters in the path; use query string
+    return apiRequest(`/doctors/available?${qs.toString()}`, { method: "GET" });
+  },
 
   // Get doctors by specialization
   getDoctorsBySpecialization: (specialization) =>
