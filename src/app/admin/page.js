@@ -15,8 +15,17 @@ export default function AdminDashboard() {
     totalFeedback: 0
   });
   
+  const [recentAppointments, setRecentAppointments] = useState([]);
+  const [recentPatients, setRecentPatients] = useState([]);
+  const [systemHealth, setSystemHealth] = useState({
+    activeDoctors: 0,
+    pendingAppointments: 0,
+    completedToday: 0
+  });
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
   const fetchDashboardStats = async () => {
     try {
@@ -39,7 +48,7 @@ export default function AdminDashboard() {
       const apiCalls = [
         { url: `${API_BASE_URL}/doctors`, name: 'doctors' },
         { url: `${API_BASE_URL}/patients/admin/patients`, name: 'patients' },
-        { url: `${API_BASE_URL}/appointments`, name: 'appointments' },
+        { url: `${API_BASE_URL}/appointments/admin/dashboard`, name: 'appointments' },
         { url: `${API_BASE_URL}/feedback`, name: 'feedback' }
       ];
 
@@ -106,12 +115,29 @@ export default function AdminDashboard() {
 
       // Calculate today's appointments if data is available
       let todayAppointments = 0;
+      let completedToday = 0;
+      let pendingAppointments = 0;
+      const today = new Date().toISOString().split('T')[0];
+      
       if (appointmentsData?.data && Array.isArray(appointmentsData.data)) {
-        const today = new Date().toISOString().split('T')[0];
-        todayAppointments = appointmentsData.data.filter(apt => 
+        const todaysAppointments = appointmentsData.data.filter(apt => 
           apt.date && apt.date.startsWith(today)
-        ).length;
+        );
+        todayAppointments = todaysAppointments.length;
+        completedToday = todaysAppointments.filter(apt => apt.status === 'completed').length;
+        pendingAppointments = appointmentsData.data.filter(apt => apt.status === 'pending').length;
+        
+        // Set recent appointments (last 5)
+        setRecentAppointments(appointmentsData.data.slice(0, 5));
       }
+
+      // Set recent patients (last 5)
+      if (patientsData?.data && Array.isArray(patientsData.data)) {
+        setRecentPatients(patientsData.data.slice(0, 5));
+      }
+
+      // Calculate active doctors
+      const activeDoctors = doctorsData?.data?.filter(doc => doc.isActive !== false).length || 0;
 
       // Use real data from backend API (with proper data structure)
       const stats = {
@@ -122,8 +148,16 @@ export default function AdminDashboard() {
         totalFeedback: feedbackData?.count || feedbackData?.data?.length || 0
       };
 
+      const healthStats = {
+        activeDoctors,
+        pendingAppointments,
+        completedToday
+      };
+
       console.log('Final stats:', stats);
+      console.log('Health stats:', healthStats);
       setStats(stats);
+      setSystemHealth(healthStats);
 
       if (hasErrors) {
         setError('Some data could not be loaded from backend. Showing available data.');
@@ -150,6 +184,13 @@ export default function AdminDashboard() {
         todayAppointments: 0,
         totalFeedback: 0
       });
+      setSystemHealth({
+        activeDoctors: 0,
+        pendingAppointments: 0,
+        completedToday: 0
+      });
+      setRecentAppointments([]);
+      setRecentPatients([]);
     } finally {
       setLoading(false);
     }
@@ -157,7 +198,19 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardStats();
-  }, []);
+    
+    // Auto-refresh every 30 seconds if enabled
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        fetchDashboardStats();
+      }, 30000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh]);
 
   if (loading) {
     return (
@@ -208,9 +261,20 @@ export default function AdminDashboard() {
           
           <button 
             onClick={fetchDashboardStats}
-            className="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 mr-3"
           >
             🔄 Refresh Data
+          </button>
+          
+          <button 
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              autoRefresh 
+                ? 'bg-green-100 text-green-800 border border-green-300' 
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {autoRefresh ? '🔴 Stop Auto-Refresh' : '🟢 Start Auto-Refresh'}
           </button>
         </div>
 
@@ -274,7 +338,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Stats Summary */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Today's Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
@@ -292,6 +356,226 @@ export default function AdminDashboard() {
             <div>
               <div className="text-2xl font-bold text-orange-600">{stats.totalFeedback}</div>
               <div className="text-sm text-gray-600">Total Feedback</div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Health & Activity Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Today's Activity */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+              Today's Activity
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Scheduled Appointments</span>
+                <span className="font-semibold text-blue-600">{stats.todayAppointments}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Completed Today</span>
+                <span className="font-semibold text-green-600">{systemHealth.completedToday}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Active Doctors</span>
+                <span className="font-semibold text-purple-600">{systemHealth.activeDoctors}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                  style={{
+                    width: stats.todayAppointments > 0 
+                      ? `${(systemHealth.completedToday / stats.todayAppointments) * 100}%` 
+                      : '0%'
+                  }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500 text-center">
+                Completion Rate: {stats.todayAppointments > 0 
+                  ? Math.round((systemHealth.completedToday / stats.todayAppointments) * 100) 
+                  : 0}%
+              </div>
+            </div>
+          </div>
+
+          {/* System Health */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+              System Health
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Pending Appointments</span>
+                <div className="flex items-center">
+                  <span className="font-semibold text-yellow-600">{systemHealth.pendingAppointments}</span>
+                  {systemHealth.pendingAppointments > 5 && (
+                    <div className="w-2 h-2 bg-red-500 rounded-full ml-2"></div>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Doctors</span>
+                <span className="font-semibold text-blue-600">{stats.totalDoctors}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Patients</span>
+                <span className="font-semibold text-green-600">{stats.totalPatients}</span>
+              </div>
+              <div className="pt-2">
+                <div className="text-xs text-gray-500 mb-1">System Status</div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm font-medium text-green-600">Healthy</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <Link 
+                href="/admin/doctors"
+                className="block w-full p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-blue-900">Add New Doctor</span>
+                  <span className="text-blue-600">→</span>
+                </div>
+              </Link>
+              <Link 
+                href="/admin/patients"
+                className="block w-full p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-green-900">View All Patients</span>
+                  <span className="text-green-600">→</span>
+                </div>
+              </Link>
+              <Link 
+                href="/admin/appointments"
+                className="block w-full p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-purple-900">Manage Appointments</span>
+                  <span className="text-purple-600">→</span>
+                </div>
+              </Link>
+              <Link 
+                href="/admin/feedback"
+                className="block w-full p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-orange-900">Review Feedback</span>
+                  <span className="text-orange-600">→</span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activities */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Recent Appointments */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Recent Appointments</h3>
+              <Link href="/admin/appointments" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentAppointments.length > 0 ? (
+                recentAppointments.map((appointment, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {appointment.patient ? 
+                          `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim() || 'Unknown Patient'
+                          : 'Unknown Patient'
+                        }
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {appointment.doctor?.user ? 
+                          `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
+                          : appointment.doctor?.displayName 
+                          ? appointment.doctor.displayName
+                          : appointment.doctor?.doctorId 
+                          ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+                          : 'Unknown Doctor'
+                        }
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {appointment.date ? new Date(appointment.date).toLocaleDateString() : 'No date'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                        appointment.status === 'completed' 
+                          ? 'bg-green-100 text-green-800'
+                          : appointment.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {appointment.status || 'pending'}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">📅</div>
+                  <p>No recent appointments</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Patients */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Recent Patients</h3>
+              <Link href="/admin/patients" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentPatients.length > 0 ? (
+                recentPatients.map((patient, index) => (
+                  <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-medium mr-3">
+                      {patient.user?.firstName ? patient.user.firstName.charAt(0).toUpperCase() : 'P'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {patient.user ? 
+                          `${patient.user.firstName || ''} ${patient.user.lastName || ''}`.trim() || 'Unknown Patient'
+                          : 'Unknown Patient'
+                        }
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {patient.user?.email || 'No email'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Joined: {patient.createdAt 
+                          ? new Date(patient.createdAt).toLocaleDateString() 
+                          : 'Unknown'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">👥</div>
+                  <p>No recent patients</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

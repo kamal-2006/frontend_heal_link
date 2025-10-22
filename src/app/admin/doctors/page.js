@@ -41,8 +41,11 @@ export default function DoctorManagement() {
     experience: '',
     phone: '',
     email: '',
-    workingHours: '',
-    address: ''
+    address: '',
+    availability: {
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      timeSlots: []
+    }
   });
   const [formErrors, setFormErrors] = useState({});
   
@@ -70,6 +73,24 @@ export default function DoctorManagement() {
     'Endocrinology'
   ];
 
+  // Generate default time slots from 9 AM to 7 PM for all days
+  const generateDefaultTimeSlots = () => {
+    const timeSlots = [];
+    
+    // Generate hourly slots from 9 AM to 7 PM (9:00 to 19:00)
+    for (let hour = 9; hour < 19; hour++) {
+      const startTime = hour.toString().padStart(2, '0') + ':00';
+      const endTime = (hour + 1).toString().padStart(2, '0') + ':00';
+      
+      timeSlots.push({
+        startTime: startTime,
+        endTime: endTime
+      });
+    }
+    
+    return timeSlots;
+  };
+
   // Toast notification functions
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -84,6 +105,27 @@ export default function DoctorManagement() {
 
   const hideConfirmDialog = () => {
     setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+  };
+
+  // Handle opening add doctor modal with default time slots
+  const handleOpenAddModal = () => {
+    const defaultTimeSlots = generateDefaultTimeSlots();
+    setFormData({
+      firstName: '',
+      lastName: '',
+      specialization: '',
+      gender: '',
+      experience: '',
+      phone: '',
+      email: '',
+      address: '',
+      availability: {
+        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        timeSlots: defaultTimeSlots
+      }
+    });
+    setFormErrors({});
+    setIsAddModalOpen(true);
   };
 
   // Fetch doctors from backend API (only database doctors, no defaults)
@@ -161,7 +203,6 @@ export default function DoctorManagement() {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email is invalid';
     }
-    if (!formData.workingHours.trim()) errors.workingHours = 'Working hours are required';
     if (!formData.address.trim()) errors.address = 'Address is required';
     
     setFormErrors(errors);
@@ -229,8 +270,11 @@ export default function DoctorManagement() {
         experience: '',
         phone: '',
         email: '',
-        workingHours: '',
-        address: ''
+        address: '',
+        availability: {
+          days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+          timeSlots: []
+        }
       });
       setFormErrors({});
       setIsAddModalOpen(false);
@@ -469,7 +513,7 @@ export default function DoctorManagement() {
           <h1 className="text-2xl font-semibold text-gray-900">Doctor Management</h1>
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={handleOpenAddModal}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -860,26 +904,6 @@ export default function DoctorManagement() {
                 )}
               </div>
 
-              {/* Working Hours */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Working Hours *
-                </label>
-                <input
-                  type="text"
-                  name="workingHours"
-                  value={formData.workingHours}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    formErrors.workingHours ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="e.g., Mon-Fri: 9AM-5PM"
-                />
-                {formErrors.workingHours && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.workingHours}</p>
-                )}
-              </div>
-
               {/* Address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -900,6 +924,63 @@ export default function DoctorManagement() {
                 )}
               </div>
 
+              {/* Time Slots Section */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-medium text-gray-900">Available Time Slots</h4>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4 mx-auto">
+                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h5 className="text-xl font-semibold text-gray-900 mb-2">Time Slots Auto-Generated</h5>
+                      <p className="text-gray-600 mb-4">
+                        All time slots from <span className="font-semibold text-blue-600">9:00 AM to 7:00 PM</span> are available
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-gray-900 mb-1">📅 Days Available</div>
+                          <div className="text-gray-600">Monday to Sunday (7 days)</div>
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-gray-900 mb-1">⏰ Time Range</div>
+                          <div className="text-gray-600">9:00 AM - 7:00 PM (10 hours)</div>
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-gray-900 mb-1">🕐 Total Slots</div>
+                          <div className="text-gray-600">70 hourly slots per week</div>
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-gray-200">
+                          <div className="font-medium text-gray-900 mb-1">✅ Status</div>
+                          <div className="text-green-600 font-medium">All Available</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Automatic Setup Complete</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          The system has automatically created hourly time slots for this doctor. 
+                          Patients can book appointments during any of these available hours. 
+                          The doctor can modify their schedule later from their dashboard.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Buttons */}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
@@ -914,8 +995,11 @@ export default function DoctorManagement() {
                       experience: '',
                       phone: '',
                       email: '',
-                      workingHours: '',
-                      address: ''
+                      address: '',
+                      availability: {
+                        days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                        timeSlots: []
+                      }
                     });
                     setFormErrors({});
                   }}

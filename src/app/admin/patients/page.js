@@ -69,7 +69,18 @@ export default function PatientManagement() {
 
   // Navigate to patient detail page
   const handleViewPatient = (patient) => {
-    router.push(`/admin/patients/${patient._id}`);
+    console.log('Viewing patient:', patient);
+    if (!patient._id) {
+      console.error('Patient ID is missing:', patient);
+      alert('Error: Patient ID is missing. Cannot view details.');
+      return;
+    }
+    try {
+      router.push(`/admin/patients/${patient._id}`);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      alert('Error navigating to patient details page.');
+    }
   };
 
   // Calculate age

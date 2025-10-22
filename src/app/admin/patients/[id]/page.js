@@ -11,6 +11,7 @@ export default function PatientDetailPage() {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     firstName: '',
     lastName: '',
@@ -147,13 +148,20 @@ export default function PatientDetailPage() {
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
+      console.log('Fetching patient details for ID:', params.id);
       const response = await fetch(`http://localhost:5000/api/v1/patients/admin/patients/${params.id}`);
       
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch patient details');
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`Failed to fetch patient details: ${response.status} - ${errorData}`);
       }
       
       const data = await response.json();
+      console.log('Patient data received:', data);
       setPatient(data.data);
       setError(null);
     } catch (err) {
@@ -248,6 +256,15 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <div className="flex space-x-3">
+              <button 
+                onClick={() => setIsReportsModalOpen(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                View Reports
+              </button>
               <button 
                 onClick={handleEditPatient}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -510,9 +527,53 @@ export default function PatientDetailPage() {
                   <span className="font-semibold">{patient.allergies?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-600">Medical Records</span>
+                  <span className="font-semibold">{patient.medicalRecords?.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-600">Patient Since</span>
                   <span className="font-semibold">{formatDate(patient.createdAt)}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Medical Records / Reports */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Medical Reports
+              </h3>
+              <div className="space-y-3">
+                {patient.medicalRecords && patient.medicalRecords.length > 0 ? (
+                  patient.medicalRecords.map((record, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold text-gray-800">{record.recordType || 'Medical Record'}</h4>
+                        <span className="text-xs text-gray-500">{formatDate(record.date || record.createdAt)}</span>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        {record.diagnosis && (
+                          <p><strong>Diagnosis:</strong> {record.diagnosis}</p>
+                        )}
+                        {record.treatment && (
+                          <p><strong>Treatment:</strong> {record.treatment}</p>
+                        )}
+                        {record.notes && (
+                          <p><strong>Notes:</strong> {record.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>No medical reports available</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -721,6 +782,130 @@ export default function PatientDetailPage() {
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reports Modal */}
+      {isReportsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">Medical Reports</h2>
+                <button
+                  onClick={() => setIsReportsModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {/* Medical Records */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Medical Records
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {patient.medicalRecords && patient.medicalRecords.length > 0 ? (
+                    <div className="space-y-4">
+                      {patient.medicalRecords.map((record, index) => (
+                        <div key={index} className="bg-white p-4 rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-gray-800">{record.recordType || 'Medical Record'}</h4>
+                            <span className="text-sm text-gray-500">{formatDate(record.date)}</span>
+                          </div>
+                          <p className="text-gray-600 mb-2"><strong>Diagnosis:</strong> {record.diagnosis || 'N/A'}</p>
+                          <p className="text-gray-600 mb-2"><strong>Treatment:</strong> {record.treatment || 'N/A'}</p>
+                          <p className="text-gray-600"><strong>Notes:</strong> {record.notes || 'No additional notes'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No medical records available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Prescriptions */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  </svg>
+                  Prescriptions
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {patient.prescriptions && patient.prescriptions.length > 0 ? (
+                    <div className="space-y-4">
+                      {patient.prescriptions.map((prescription, index) => (
+                        <div key={index} className="bg-white p-4 rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-gray-800">{prescription.medication || 'Medication'}</h4>
+                            <span className="text-sm text-gray-500">{formatDate(prescription.createdAt)}</span>
+                          </div>
+                          <p className="text-gray-600 mb-1"><strong>Dosage:</strong> {prescription.dosage || 'N/A'}</p>
+                          <p className="text-gray-600 mb-1"><strong>Frequency:</strong> {prescription.frequency || 'N/A'}</p>
+                          <p className="text-gray-600 mb-2"><strong>Duration:</strong> {prescription.duration || 'N/A'}</p>
+                          <p className="text-gray-600">
+                            <strong>Prescribed by:</strong> 
+                            {prescription.prescribedBy?.user 
+                              ? ` Dr. ${prescription.prescribedBy.user.firstName} ${prescription.prescribedBy.user.lastName}`
+                              : ' N/A'
+                            }
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No prescriptions available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Appointments */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Recent Appointments
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {patient.appointments && patient.appointments.length > 0 ? (
+                    <div className="space-y-4">
+                      {patient.appointments.slice(0, 5).map((appointment, index) => (
+                        <div key={index} className="bg-white p-4 rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-gray-800">
+                              {appointment.doctor?.user 
+                                ? `Dr. ${appointment.doctor.user.firstName} ${appointment.doctor.user.lastName}`
+                                : 'Doctor N/A'
+                              }
+                            </h4>
+                            <span className="text-sm text-gray-500">{formatDate(appointment.date)}</span>
+                          </div>
+                          <p className="text-gray-600 mb-1"><strong>Status:</strong> {appointment.status || 'N/A'}</p>
+                          <p className="text-gray-600 mb-2"><strong>Reason:</strong> {appointment.reason || 'N/A'}</p>
+                          {appointment.notes && (
+                            <p className="text-gray-600"><strong>Notes:</strong> {appointment.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No appointment history available</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

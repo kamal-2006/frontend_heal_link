@@ -18,7 +18,7 @@ export default function AppointmentManagement() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/appointments`);
+      const response = await fetch(`${API_BASE_URL}/appointments/admin/dashboard`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch appointments');
@@ -48,6 +48,28 @@ export default function AppointmentManagement() {
     return (first + last).toUpperCase();
   };
 
+  const getStatusBadgeColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+      case 'scheduled':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'rescheduled':
+        return 'bg-purple-100 text-purple-800';
+      case 'no-show':
+        return 'bg-gray-100 text-gray-800';
+      case 'in-progress':
+        return 'bg-indigo-100 text-indigo-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const formatDate = (iso) => {
     const d = new Date(iso);
     const dd = String(d.getDate()).padStart(2, '0');
@@ -69,18 +91,7 @@ export default function AppointmentManagement() {
     return { date, time };
   };
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const handleReschedule = (appointment) => {
     setAppointmentToReschedule(appointment);
@@ -285,7 +296,13 @@ export default function AppointmentManagement() {
         patientId: appointment.patient._id,
         type: 'appointment_rescheduled',
         title: 'Appointment Rescheduled',
-        message: `Your appointment with Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName} has been rescheduled to ${new Date(newDateTime).toLocaleDateString()} at ${new Date(newDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`,
+        message: `Your appointment with ${
+          appointment.doctor?.user ? 
+            `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
+            : appointment.doctor?.doctorId 
+            ? `Dr. ${appointment.doctor.doctorId}`
+            : 'your doctor'
+        } has been rescheduled to ${new Date(newDateTime).toLocaleDateString()} at ${new Date(newDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`,
         appointmentId: appointmentId,
         newDateTime: newDateTime
       };
@@ -427,9 +444,16 @@ export default function AppointmentManagement() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="text-sm text-gray-900 truncate">
-                          {appointment.doctor ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}` : 'No doctor assigned'}
+                          {appointment.doctor?.displayName || 
+                           (appointment.doctor?.user ? 
+                            `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim() :
+                            appointment.doctor?.doctorId ? 
+                            `Dr. ${appointment.doctor.doctorId}` :
+                            'No doctor assigned'
+                           )
+                          }
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{appointment.doctor?.specialty || 'General Medicine'}</div>
+                        <div className="text-xs text-gray-500 truncate">{appointment.doctor?.specialization || 'Unassigned'}</div>
                       </td>
                       <td className="px-2 py-3">
                         <div className="text-sm text-gray-900 truncate">
@@ -681,11 +705,12 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
             <div>
               <label className="block text-sm font-medium text-gray-700">Doctor Name</label>
               <p className="text-sm text-gray-900">
-                {appointment.doctor ? (
-                  `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
-                ) : (
-                  <span className="text-red-600">No doctor assigned</span>
-                )}
+                {appointment.doctor?.user ? 
+                  `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
+                  : appointment.doctor?.doctorId 
+                  ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+                  : <span className="text-red-600">No doctor assigned</span>
+                }
               </p>
             </div>
             <div>
@@ -762,13 +787,14 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Current Doctor</label>
                   <p className="text-sm text-gray-900 mt-1 p-2 bg-gray-50 rounded-md">
-                    {appointment.doctor ? (
-                      `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
-                    ) : (
-                      <span className="text-red-600">No doctor assigned</span>
-                    )}
+                    {appointment.doctor?.user ? 
+                      `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
+                      : appointment.doctor?.doctorId 
+                      ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+                      : <span className="text-red-600">No doctor assigned</span>
+                    }
                   </p>
-                  <p className="text-xs text-gray-500">{appointment.doctor?.specialty || appointment.doctor?.specialization || 'General Medicine'}</p>
+                  <p className="text-xs text-gray-500">{appointment.doctor?.specialization || 'General Medicine'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Select New Doctor</label>
@@ -960,11 +986,12 @@ function RescheduleModal({ appointment, onClose, onConfirm }) {
               Time: {appointment.time}
             </p>
             <p className="text-sm text-gray-600">
-              Doctor: {appointment.doctor ? (
-                `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
-              ) : (
-                <span className="text-red-600">No doctor assigned</span>
-              )}
+              Doctor: {appointment.doctor?.user ? 
+                `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
+                : appointment.doctor?.doctorId 
+                ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+                : <span className="text-red-600">No doctor assigned</span>
+              }
             </p>
           </div>
 
