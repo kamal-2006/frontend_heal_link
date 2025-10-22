@@ -23,18 +23,31 @@ export default function PatientDashboard() {
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [showReasonDialog, setShowReasonDialog] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Force refresh trigger
 
   useEffect(() => {
+    console.log('🔄 Dashboard useEffect triggered, refreshKey:', refreshKey);
+    
     const fetchData = async () => {
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
+      
+      console.log('🔍 Token exists:', !!token, 'Role:', role);
       
       if (!token || role !== 'patient') {
         router.push('/login');
         return;
       }
 
+      // Check if appointment was just booked
+      const justBooked = localStorage.getItem('appointmentJustBooked');
+      if (justBooked === 'true') {
+        console.log('🎉 Detected new appointment booking, will refresh data!');
+        localStorage.removeItem('appointmentJustBooked');
+      }
+
       try {
+        console.log('📡 Fetching dashboard data...');
         // Fetch patient-specific data
         const { appointmentApi, medicationApi, reportsApi } = await import('../../../utils/api');
         const [appointmentsRes, medicationsRes, notificationsRes, dashboardRes, reportsRes] = await Promise.all([
@@ -47,6 +60,7 @@ export default function PatientDashboard() {
           reportsApi.getMyReports().catch(() => ({ data: [] }))
         ]);
 
+        console.log('✅ Appointments fetched:', appointmentsRes?.data?.length || 0, 'appointments');
         setAppointments(appointmentsRes?.data || []);
         setPrescriptions(medicationsRes?.data || []);
         setNotifications(notificationsRes?.data || []);
@@ -61,15 +75,31 @@ export default function PatientDashboard() {
         } else {
           setDashboardData(null);
         }
+        
+        console.log('✅ All dashboard data loaded successfully!');
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('❌ Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [router]);
+    
+    // Also fetch data when page becomes visible (user returns from booking page)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('📱 Page became visible, refreshing data...');
+        setRefreshKey(prev => prev + 1); // Trigger refresh
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router, refreshKey]);
 
   // Listen for medical report changes
   useEffect(() => {
@@ -97,12 +127,21 @@ export default function PatientDashboard() {
       }
     };
 
+    const handleAppointmentBooked = async (event) => {
+      console.log('🎉 Appointment booked event received in dashboard:', event.detail);
+      // Trigger full refresh
+      console.log('� Triggering full dashboard refresh...');
+      setRefreshKey(prev => prev + 1);
+    };
+
     window.addEventListener('medicalReportDeleted', handleReportDeleted);
     window.addEventListener('medicalReportUploaded', handleReportUploaded);
+    window.addEventListener('appointmentBooked', handleAppointmentBooked);
 
     return () => {
       window.removeEventListener('medicalReportDeleted', handleReportDeleted);
       window.removeEventListener('medicalReportUploaded', handleReportUploaded);
+      window.removeEventListener('appointmentBooked', handleAppointmentBooked);
     };
   }, []);
 
@@ -166,8 +205,8 @@ export default function PatientDashboard() {
     const appointmentDate = new Date(appointment.date);
     const now = new Date();
     
-    // If appointment is in the past and was pending or confirmed, mark as completed
-    if (appointmentDate < now && (appointment.status === 'pending' || appointment.status === 'confirmed')) {
+    // If appointment is in the past and was pending, confirmed, or scheduled, mark as completed
+    if (appointmentDate < now && (appointment.status === 'pending' || appointment.status === 'confirmed' || appointment.status === 'scheduled')) {
       return 'completed';
     }
     
@@ -182,8 +221,8 @@ export default function PatientDashboard() {
       const now = new Date();
       const actualStatus = getActualAppointmentStatus(app);
       
-      // Only show future appointments that are pending or confirmed
-      return (actualStatus === 'pending' || actualStatus === 'confirmed') && appointmentDate >= now;
+      // Only show future appointments that are pending, confirmed, or scheduled
+      return (actualStatus === 'pending' || actualStatus === 'confirmed' || actualStatus === 'scheduled') && appointmentDate >= now;
     })
     .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
     .slice(0, 3);

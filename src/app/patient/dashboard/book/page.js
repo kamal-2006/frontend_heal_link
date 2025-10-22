@@ -128,6 +128,17 @@ export default function PatientBookPage() {
         text: "Appointment booked successfully! You can view it in your appointments." 
       });
       
+      // Dispatch custom event to notify other components
+      console.log('🔔 Dispatching appointmentBooked event with data:', response.data);
+      const event = new CustomEvent('appointmentBooked', { 
+        detail: response.data 
+      });
+      window.dispatchEvent(event);
+      console.log('✅ appointmentBooked event dispatched successfully!');
+      
+      // Set flag in localStorage so dashboard knows to refresh
+      localStorage.setItem('appointmentJustBooked', 'true');
+      
       // Reset form and go back to step 1
       setFormData({
         reason: "",

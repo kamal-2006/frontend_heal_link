@@ -41,6 +41,32 @@ export default function PatientAppointments() {
     fetchAppointments();
   }, [router]);
 
+  // Listen for appointment booking events
+  useEffect(() => {
+    const handleAppointmentBooked = async (event) => {
+      console.log('Appointment booked:', event.detail);
+      // Refresh appointments list
+      try {
+        const response = await appointmentApi.getMyAppointments();
+        setAppointments(response?.data || []);
+        setMessage({ 
+          type: 'success', 
+          text: 'New appointment has been added!' 
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } catch (error) {
+        console.error('Error refreshing appointments:', error);
+      }
+    };
+
+    window.addEventListener('appointmentBooked', handleAppointmentBooked);
+
+    return () => {
+      window.removeEventListener('appointmentBooked', handleAppointmentBooked);
+    };
+  }, []);
+
   // Helper function to get the actual status of an appointment based on current time
   const getActualAppointmentStatus = (appointment) => {
     const appointmentDate = new Date(appointment.date);
@@ -156,6 +182,14 @@ export default function PatientAppointments() {
   };
 
   const filteredAppointments = getFilteredAppointments();
+
+  const formatTime = (isoDate) => {
+    try {
+      return new Date(isoDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -284,7 +318,7 @@ export default function PatientAppointments() {
                             day: 'numeric'
                           })}
                         </p>
-                        <p className="text-sm text-gray-500">{appointment.time}</p>
+                        <p className="text-sm text-gray-500">{formatTime(appointment.date)}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(getActualAppointmentStatus(appointment))}`}>
                         {toTitleCase(getActualAppointmentStatus(appointment))}

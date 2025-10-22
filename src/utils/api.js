@@ -2,21 +2,29 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 // Helper function to get auth headers
-const getAuthHeaders = () => {
+const getAuthHeaders = (isFormData = false) => {
   const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
+  const headers = {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  return headers;
 };
 
 // Generic API request function
-const apiRequest = async (endpoint, options = {}) => {
+const apiRequest = async (endpoint, options = {}, isFormData = false) => {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(isFormData),
       ...options,
     });
+
+    // Network error handling
+    if (!response) {
+      throw new Error("Network error: No response received");
+    }
 
     let data = null;
 
@@ -32,6 +40,7 @@ const apiRequest = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
+      console.log(response);
       // Handle authorization errors specially
       if (response.status === 401 || response.status === 403) {
         const errorMessage = data?.error || "Authentication failed";
@@ -42,7 +51,11 @@ const apiRequest = async (endpoint, options = {}) => {
         localStorage.removeItem("user");
 
         // Redirect to login if not authorized
-        if (window.location.pathname.includes("/admin")) {
+        if (
+          window.location.pathname.includes("/admin") ||
+          window.location.pathname.includes("/doctor") ||
+          window.location.pathname.includes("/patient")
+        ) {
           window.location.href = "/login";
         }
       }
@@ -53,6 +66,13 @@ const apiRequest = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
+    // Provide a clearer error message for network errors
+    if (error.name === "TypeError" && error.message === "Failed to fetch") {
+      console.error("API Error: Network error or server is unreachable");
+      throw new Error(
+        "Network error: Unable to reach the server. Please check your connection or server status."
+      );
+    }
     console.error("API Error:", error);
     throw error;
   }
@@ -66,11 +86,15 @@ export const post = (endpoint, body) =>
     body: JSON.stringify(body),
   });
 
-export const put = (endpoint, body) =>
-  apiRequest(endpoint, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
+export const put = (endpoint, body, isFormData = false) =>
+  apiRequest(
+    endpoint,
+    {
+      method: "PUT",
+      body: isFormData ? body : JSON.stringify(body),
+    },
+    isFormData
+  );
 
 export const del = (endpoint) =>
   apiRequest(endpoint, {
@@ -153,11 +177,25 @@ export const authApi = {
 
 // Doctor API functions
 export const doctorApi = {
+  // Get current doctor profile
+  getMyProfile: () => apiRequest("/doctors/me"),
+
+  // Update current doctor profile
+  updateMyProfile: (profileData) => put("/doctors/me", profileData, true),
+
   // Get all doctors
   getDoctors: () => apiRequest("/doctors"),
 
   // Get available doctors for appointments
-  getAvailableDoctors: (query = "") => apiRequest(`/doctors/available${query}`),
+  getAvailableDoctors: async (filters = {}) => {
+    const qs = new URLSearchParams();
+    if (filters.date) qs.set("date", filters.date);
+    if (filters.startTime) qs.set("startTime", filters.startTime);
+    if (filters.endTime) qs.set("endTime", filters.endTime);
+
+    // Do NOT pass filters in the path; use query string
+    return apiRequest(`/doctors/available?${qs.toString()}`, { method: "GET" });
+  },
 
   // Get doctors by specialization
   getDoctorsBySpecialization: (specialization) =>
@@ -187,8 +225,13 @@ export const appointmentApi = {
   getMyAppointments: () => apiRequest("/appointments"),
 
   // Get doctor appointments - use the correct endpoint
-  getDoctorAppointments: () => {
-    return apiRequest("/doctor/appointments");
+  getDoctorAppointments: async () => {
+    try {
+      return await apiRequest("/doctor/appointments");
+    } catch (error) {
+      console.error("Error fetching doctor appointments:", error);
+      return { success: false, error: error.message, data: [] };
+    }
   },
 
   // Get all appointments (for the current user based on role)
@@ -201,11 +244,15 @@ export const appointmentApi = {
   },
 
   // Book new appointment
-  bookAppointment: (appointmentData) =>
-    apiRequest("/appointments/book", {
+  bookAppointment: (appointmentData) => {
+    // Ensure doctor and patient IDs are sent correctly
+    // doctor: current user (doctor), patient: selected patient
+    // appointmentData should include patient, date, reason, notes
+    return apiRequest("/appointments/book", {
       method: "POST",
       body: JSON.stringify(appointmentData),
-    }),
+    });
+  },
 
   // Cancel appointment
   cancelAppointment: (id, data = {}) =>
