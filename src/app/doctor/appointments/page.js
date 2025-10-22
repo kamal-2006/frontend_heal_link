@@ -21,7 +21,9 @@ export default function DoctorAppointments() {
         if (data.success && data.data) {
           const formattedAppointments = data.data.map((appointment) => ({
             id: appointment._id,
-            patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`,
+            patientName: appointment.patient?.firstName && appointment.patient?.lastName
+              ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
+              : 'Unknown Patient',
             patientId: appointment.patient?.patientInfo?.patientId || "",
             fullDate: new Date(appointment.date),
             date: new Date(appointment.date).toISOString().split("T")[0],
@@ -36,46 +38,6 @@ export default function DoctorAppointments() {
             doctor: appointment.doctor,
           }));
           setAppointments(formattedAppointments);
-          
-          // Auto-complete appointments that are 15 minutes past scheduled time
-          const now = new Date();
-          const appointmentsToUpdate = formattedAppointments.filter(appointment => {
-            // Only check active appointments
-            if (appointment.status !== "confirmed" && 
-                appointment.status !== "scheduled" && 
-                appointment.status !== "rescheduled") {
-              return false;
-            }
-            
-            const appointmentTime = appointment.fullDate;
-            const fifteenMinutesAfter = new Date(appointmentTime);
-            fifteenMinutesAfter.setMinutes(fifteenMinutesAfter.getMinutes() + 15);
-            
-            return now > fifteenMinutesAfter;
-          });
-          
-          // Update status to completed for eligible appointments
-          if (appointmentsToUpdate.length > 0) {
-            appointmentsToUpdate.forEach(async (appointment) => {
-              try {
-                await appointmentApi.updateAppointment(appointment.id, {
-                  status: "completed"
-                });
-                console.log(`Auto-completed appointment ${appointment.id}`);
-              } catch (error) {
-                console.error(`Error auto-completing appointment ${appointment.id}:`, error);
-              }
-            });
-            
-            // Update local state
-            setAppointments(prevAppointments => 
-              prevAppointments.map(appointment => 
-                appointmentsToUpdate.some(a => a.id === appointment.id)
-                  ? { ...appointment, status: "completed" }
-                  : appointment
-              )
-            );
-          }
         }
       } catch (error) {
         console.error("Error fetching appointments:", error);
@@ -85,12 +47,6 @@ export default function DoctorAppointments() {
     };
 
     fetchAppointments();
-    
-    // Set up interval to check for appointments to auto-complete every minute
-    const intervalId = setInterval(fetchAppointments, 60000);
-    
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
   }, []);
 
   const filteredAppointments = appointments.filter((appointment) => {
@@ -151,11 +107,9 @@ export default function DoctorAppointments() {
     setEditingAppointmentId(appointment.id);
     setShowActionsFor(null);
     const date = new Date(appointment.fullDate).toISOString();
-    const doctorIdToSet = availableDoctors.find(d => d.user && d.user._id === appointment.doctor)?._id || "";
-
     setRescheduleData({
       date: date.slice(0, 16),
-      doctor: doctorIdToSet,
+      doctor: appointment.doctor ? appointment.doctor._id : "",
     });
     await fetchAvailableDoctors(date, appointment.id);
   };
