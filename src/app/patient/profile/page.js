@@ -117,50 +117,115 @@ export default function ViewProfile() {
     try {
       setIsSaving(true);
       
-      const updateData = {
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
-        phone: profileData.phone,
-        dateOfBirth: profileData.dateOfBirth,
-        gender: profileData.gender || undefined,
-        bloodType: profileData.bloodType || undefined,
-        height: {
-          value: profileData.height ? Number(profileData.height) : null,
-          unit: 'cm'
-        },
-        weight: {
-          value: profileData.weight ? Number(profileData.weight) : null,
-          unit: 'kg'
-        },
-        address: {
+      let requestData;
+      
+      if (profileImage) {
+        // Use FormData for file upload
+        requestData = new FormData();
+        requestData.append('profilePhoto', profileImage);
+        requestData.append('firstName', profileData.firstName);
+        requestData.append('lastName', profileData.lastName);
+        requestData.append('phone', profileData.phone);
+        requestData.append('dateOfBirth', profileData.dateOfBirth);
+        if (profileData.gender) requestData.append('gender', profileData.gender);
+        if (profileData.bloodType) requestData.append('bloodType', profileData.bloodType);
+        
+        // Handle nested objects as JSON strings
+        if (profileData.height) {
+          requestData.append('height', JSON.stringify({
+            value: Number(profileData.height),
+            unit: 'cm'
+          }));
+        }
+        if (profileData.weight) {
+          requestData.append('weight', JSON.stringify({
+            value: Number(profileData.weight),
+            unit: 'kg'
+          }));
+        }
+        
+        requestData.append('address', JSON.stringify({
           street: profileData.address,
           city: profileData.city,
           state: profileData.state,
           zipCode: profileData.zipCode
-        },
-        emergencyContact: {
+        }));
+        
+        requestData.append('emergencyContact', JSON.stringify({
           name: profileData.emergencyContactName,
           phone: profileData.emergencyContactPhone,
           relationship: profileData.emergencyContactRelationship,
           email: profileData.emergencyContactEmail
-        },
-        allergies: profileData.allergies ? profileData.allergies.split(',').map(item => item.trim()).filter(item => item) : [],
-        medicalConditions: profileData.medicalConditions ? profileData.medicalConditions.split(',').map(item => item.trim()).filter(item => item) : [],
-        medications: profileData.medications ? profileData.medications.split(',').map(item => item.trim()).filter(item => item) : [],
-        insuranceInfo: {
+        }));
+        
+        if (profileData.allergies) {
+          requestData.append('allergies', JSON.stringify(profileData.allergies.split(',').map(item => item.trim()).filter(item => item)));
+        }
+        if (profileData.medicalConditions) {
+          requestData.append('medicalConditions', JSON.stringify(profileData.medicalConditions.split(',').map(item => item.trim()).filter(item => item)));
+        }
+        if (profileData.medications) {
+          requestData.append('medications', JSON.stringify(profileData.medications.split(',').map(item => item.trim()).filter(item => item)));
+        }
+        
+        requestData.append('insuranceInfo', JSON.stringify({
           provider: profileData.insuranceProvider,
           policyNumber: profileData.insurancePolicyNumber,
           groupNumber: profileData.insuranceGroupNumber
-        },
-        maritalStatus: profileData.maritalStatus || undefined,
-        occupation: profileData.occupation,
-        preferredLanguage: profileData.preferredLanguage,
-        smokingStatus: profileData.smokingStatus || undefined,
-        alcoholUse: profileData.alcoholUse || undefined
-      };
+        }));
+        
+        if (profileData.maritalStatus) requestData.append('maritalStatus', profileData.maritalStatus);
+        if (profileData.occupation) requestData.append('occupation', profileData.occupation);
+        if (profileData.preferredLanguage) requestData.append('preferredLanguage', profileData.preferredLanguage);
+        if (profileData.smokingStatus) requestData.append('smokingStatus', profileData.smokingStatus);
+        if (profileData.alcoholUse) requestData.append('alcoholUse', profileData.alcoholUse);
+      } else {
+        // Use JSON for regular updates
+        requestData = {
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          phone: profileData.phone,
+          dateOfBirth: profileData.dateOfBirth,
+          gender: profileData.gender || undefined,
+          bloodType: profileData.bloodType || undefined,
+          height: {
+            value: profileData.height ? Number(profileData.height) : null,
+            unit: 'cm'
+          },
+          weight: {
+            value: profileData.weight ? Number(profileData.weight) : null,
+            unit: 'kg'
+          },
+          address: {
+            street: profileData.address,
+            city: profileData.city,
+            state: profileData.state,
+            zipCode: profileData.zipCode
+          },
+          emergencyContact: {
+            name: profileData.emergencyContactName,
+            phone: profileData.emergencyContactPhone,
+            relationship: profileData.emergencyContactRelationship,
+            email: profileData.emergencyContactEmail
+          },
+          allergies: profileData.allergies ? profileData.allergies.split(',').map(item => item.trim()).filter(item => item) : [],
+          medicalConditions: profileData.medicalConditions ? profileData.medicalConditions.split(',').map(item => item.trim()).filter(item => item) : [],
+          medications: profileData.medications ? profileData.medications.split(',').map(item => item.trim()).filter(item => item) : [],
+          insuranceInfo: {
+            provider: profileData.insuranceProvider,
+            policyNumber: profileData.insurancePolicyNumber,
+            groupNumber: profileData.insuranceGroupNumber
+          },
+          maritalStatus: profileData.maritalStatus || undefined,
+          occupation: profileData.occupation,
+          preferredLanguage: profileData.preferredLanguage,
+          smokingStatus: profileData.smokingStatus || undefined,
+          alcoholUse: profileData.alcoholUse || undefined
+        };
+      }
 
-      console.log('Sending update data:', updateData);
-      const response = await patientApi.updateMyProfile(updateData);
+      console.log('Sending update data:', requestData instanceof FormData ? 'FormData with file' : requestData);
+      const response = await patientApi.updateMyProfile(requestData);
       console.log('Update response:', response);
       
       setIsEditing(false);
@@ -304,19 +369,30 @@ export default function ViewProfile() {
               <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl font-bold mr-6 overflow-hidden ring-4 ring-white ring-opacity-50 shadow-lg">
                 {imagePreview ? (
                   <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
-                ) : patient?.profileImage ? (
-                  <img src={patient.profileImage} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white to-blue-100 text-blue-600">
-                    {patient?.user ? (
-                      `${patient.user.firstName.charAt(0)}${patient.user.lastName.charAt(0)}`
-                    ) : (
-                      <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                      </svg>
-                    )}
-                  </div>
-                )}
+                ) : patient?.user?.profilePicture ? (
+                  <img 
+                    src={`http://localhost:5000/${patient.user.profilePicture}`} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                {/* Default placeholder - shown when no image or on image error */}
+                <div 
+                  className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white to-blue-100 text-blue-600"
+                  style={{ display: (imagePreview || patient?.user?.profilePicture) ? 'none' : 'flex' }}
+                >
+                  {patient?.user ? (
+                    `${patient.user.firstName.charAt(0)}${patient.user.lastName.charAt(0)}`
+                  ) : (
+                    <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  )}
+                </div>
               </div>
               {isEditing && (
                 <label className="absolute -bottom-2 -right-2 bg-white hover:bg-blue-50 text-blue-600 p-2 rounded-full cursor-pointer shadow-lg border-2 border-white">

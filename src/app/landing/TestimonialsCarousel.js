@@ -74,6 +74,9 @@ export default function TestimonialsCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(3); // Default to 3 for server/client consistency
   const [isClient, setIsClient] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   const autoPlayRef = useRef(null);
 
   // Update visible cards on window resize - only on client
@@ -103,25 +106,73 @@ export default function TestimonialsCarousel() {
 
   // Auto-play functionality - only run on client
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || isPaused) return;
     
     autoPlayRef.current = setInterval(() => {
       setCurrentIndex((prevIndex) => 
         prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
       );
-    }, 6000); // Move every 6 seconds
+    }, 4000); // Move every 4 seconds (within 3-5 second range)
 
     return () => {
       if (autoPlayRef.current) {
         clearInterval(autoPlayRef.current);
       }
     };
-  }, [totalSlides, isClient]);
+  }, [totalSlides, visibleCards, isClient, isPaused]);
 
   // Get testimonials for current slide
   const getCurrentTestimonials = () => {
     const start = currentIndex * visibleCards;
     return TESTIMONIALS.slice(start, start + visibleCards);
+  };
+
+  // Helper function to restart autoplay
+  const restartAutoplay = () => {
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current);
+    }
+    if (isClient && !isPaused) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => 
+          prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+        );
+      }, 4000);
+    }
+  };
+
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e) => {
+    setTouchEnd(0); // Reset touch end
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      // Swipe left - next slide
+      setCurrentIndex((prevIndex) => 
+        prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+      );
+      restartAutoplay();
+    }
+    
+    if (isRightSwipe) {
+      // Swipe right - previous slide
+      setCurrentIndex((prevIndex) => 
+        prevIndex <= 0 ? totalSlides - 1 : prevIndex - 1
+      );
+      restartAutoplay();
+    }
   };
 
   // Render loading state on server or during initial client hydration
@@ -158,11 +209,18 @@ export default function TestimonialsCarousel() {
         </div>
         
         {/* Carousel Container */}
-        <div className="relative overflow-hidden">
+        <div 
+          className="relative overflow-hidden group"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div 
-            className="flex"
+            className="flex transition-transform duration-700 ease-in-out"
             style={{
-              // transform: `translateX(-${currentIndex * 100}%)`
+              transform: `translateX(-${currentIndex * 100}%)`
             }}
           >
             {/* Create slides */}
@@ -175,7 +233,7 @@ export default function TestimonialsCarousel() {
                   {TESTIMONIALS.slice(slideIndex * visibleCards, (slideIndex * visibleCards) + visibleCards).map((testimonial) => (
                     <div
                       key={testimonial.id}
-                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg relative ${testimonial.borderColor} dark:border-gray-600 border`}
+                      className={`bg-gradient-to-br ${testimonial.bgColor} dark:from-gray-800 dark:to-gray-700 p-8 rounded-2xl shadow-lg relative ${testimonial.borderColor} dark:border-gray-600 border transition-all duration-300 hover:shadow-xl hover:scale-105`}
                     >
                       <div className={`${testimonial.quoteColor} dark:text-gray-400 text-6xl absolute top-4 left-6 opacity-20 font-serif`}>
                         &#8220;
@@ -200,34 +258,63 @@ export default function TestimonialsCarousel() {
               </div>
             ))}
           </div>
+
+          {/* Navigation Arrows */}
+          {totalSlides > 1 && (
+            <>
+              <button
+                onClick={() => {
+                  setCurrentIndex((prevIndex) => 
+                    prevIndex <= 0 ? totalSlides - 1 : prevIndex - 1
+                  );
+                  restartAutoplay();
+                }}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/50 z-10"
+                aria-label="Previous testimonials"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setCurrentIndex((prevIndex) => 
+                    prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
+                  );
+                  restartAutoplay();
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/50 z-10"
+                aria-label="Next testimonials"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Indicators */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {Array.from({ length: totalSlides }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                if (autoPlayRef.current) {
-                  clearInterval(autoPlayRef.current);
-                }
-                setCurrentIndex(index);
-                // Restart auto-play only on client
-                if (isClient) {
-                  autoPlayRef.current = setInterval(() => {
-                    setCurrentIndex((prevIndex) => 
-                      prevIndex >= totalSlides - 1 ? 0 : prevIndex + 1
-                    );
-                  }, 6000);
-                }
-              }}
-              className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                currentIndex === index ? "bg-blue-600" : "bg-gray-300"
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
+        {totalSlides > 1 && (
+          <div className="flex justify-center mt-8 space-x-2">
+            {Array.from({ length: totalSlides }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setCurrentIndex(index);
+                  restartAutoplay();
+                }}
+                className={`w-3 h-3 rounded-full transition-all duration-300 hover:scale-125 ${
+                  currentIndex === index 
+                    ? "bg-blue-600 shadow-lg shadow-blue-600/30" 
+                    : "bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Progress indicator */}
         <div className="text-center mt-4">

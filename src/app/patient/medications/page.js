@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import usePatient from "@/hooks/usePatient";
 // import { get } from "@/utils/api";
 
 export default function MedicationsPage() {
   const router = useRouter();
+  const { patient } = usePatient();
   const [medications, setMedications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
@@ -72,10 +74,48 @@ export default function MedicationsPage() {
     setSearchTerm(value);
   };
 
+  // Calculate days remaining for active medications
+  const calculateDaysRemaining = (endDate) => {
+    const today = new Date();
+    const end = new Date(endDate);
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  // Determine the actual status based on dates
+  const getActualStatus = (medication) => {
+    if (!medication.endDate) {
+      return medication.status || "active"; // No end date means ongoing
+    }
+    
+    const today = new Date();
+    const endDate = new Date(medication.endDate);
+    
+    // If end date has passed, medication should be completed/expired
+    if (endDate < today) {
+      return "completed";
+    }
+    
+    // If medication has an end date but hasn't reached it yet
+    return medication.status || "active";
+  };
+
+  // Check if medication needs refill soon (within 7 days)
+  const needsRefillSoon = (medication) => {
+    const actualStatus = getActualStatus(medication);
+    if (actualStatus !== "active") return false;
+    if (medication.refillsRemaining <= 0) return false;
+
+    const daysRemaining = calculateDaysRemaining(medication.endDate);
+    return daysRemaining <= 7 && daysRemaining > 0;
+  };
+
   // Filter medications based on search term and active filter
   const filteredMedications = medications.filter((medication) => {
-    // First filter by status
-    const statusMatch = activeFilter === "all" || medication.status === activeFilter;
+    // First filter by status using actual status
+    const actualStatus = getActualStatus(medication);
+    const statusMatch = activeFilter === "all" || actualStatus === activeFilter;
     
     // Then filter by search term
     const search = (searchTerm || "").toLowerCase();
@@ -87,31 +127,9 @@ export default function MedicationsPage() {
     return statusMatch && searchMatch;
   });
 
-
-
   const handleViewMedication = (medication) => {
     setSelectedMedication(medication);
     setShowMedicationModal(true);
-  };
-
-
-
-  // Calculate days remaining for active medications
-  const calculateDaysRemaining = (endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
-
-  // Check if medication needs refill soon (within 7 days)
-  const needsRefillSoon = (medication) => {
-    if (medication.status !== "active") return false;
-    if (medication.refillsRemaining <= 0) return false;
-
-    const daysRemaining = calculateDaysRemaining(medication.endDate);
-    return daysRemaining <= 7 && daysRemaining > 0;
   };
 
   // Handle form input changes
@@ -213,10 +231,15 @@ export default function MedicationsPage() {
         // Show success popup
         setShowSuccessPopup(true);
         
-        // Auto-hide success popup after 3 seconds
+        // Dispatch event to notify dashboard of medication change
+        window.dispatchEvent(new CustomEvent('medicationAdded', {
+          detail: { medication: result.data }
+        }));
+        
+        // Auto-hide success popup after 4 seconds
         setTimeout(() => {
           setShowSuccessPopup(false);
-        }, 3000);
+        }, 4000);
       } else {
         const error = await response.json();
         alert("Failed to add medication: " + error.error);
@@ -371,9 +394,8 @@ export default function MedicationsPage() {
                       {medication.name}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {medication.prescribedBy ? `Prescribed by ${medication.prescribedBy}` : 
-                       medication.doctor ? `Dr. ${medication.doctor.firstName} ${medication.doctor.lastName}` : 
-                       'Self-managed'}
+                      {medication.doctor ? `Dr. ${medication.doctor.firstName} ${medication.doctor.lastName}` : 
+                       patient?.user ? `Pt. ${patient.user.firstName} ${patient.user.lastName}` : 'Added by Me'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -387,7 +409,7 @@ export default function MedicationsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {medication.endDate ? new Date(medication.endDate).toLocaleDateString() : 'Ongoing'}
-                    {medication.status === "active" && medication.endDate && (
+                    {getActualStatus(medication) === "active" && medication.endDate && (
                       <div className="text-xs text-blue-600">
                         {calculateDaysRemaining(medication.endDate)} days
                         remaining
@@ -397,13 +419,15 @@ export default function MedicationsPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        medication.status === "active"
+                        getActualStatus(medication) === "active"
                           ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
+                          : getActualStatus(medication) === "completed"
+                          ? "bg-gray-100 text-gray-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {medication.status.charAt(0).toUpperCase() +
-                        medication.status.slice(1)}
+                      {getActualStatus(medication).charAt(0).toUpperCase() +
+                        getActualStatus(medication).slice(1)}
                     </span>
                     {needsRefillSoon(medication) && (
                       <span className="ml-2 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
@@ -458,9 +482,23 @@ export default function MedicationsPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  {selectedMedication.name}
-                </h3>
+                <div className="flex items-center space-x-3">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {selectedMedication.name}
+                  </h3>
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      getActualStatus(selectedMedication) === "active"
+                        ? "bg-green-100 text-green-800"
+                        : getActualStatus(selectedMedication) === "completed"
+                        ? "bg-gray-100 text-gray-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {getActualStatus(selectedMedication).charAt(0).toUpperCase() +
+                      getActualStatus(selectedMedication).slice(1)}
+                  </span>
+                </div>
                 <button
                   onClick={() => setShowMedicationModal(false)}
                   className="text-gray-400 hover:text-gray-500"
@@ -510,7 +548,7 @@ export default function MedicationsPage() {
                   <p className="text-sm font-medium text-gray-500">End Date</p>
                   <p className="mt-1 text-sm text-gray-900">
                     {new Date(selectedMedication.endDate).toLocaleDateString()}
-                    {selectedMedication.status === "active" && (
+                    {getActualStatus(selectedMedication) === "active" && (
                       <span className="ml-2 text-xs text-blue-600">
                         ({calculateDaysRemaining(selectedMedication.endDate)}{" "}
                         days remaining)
@@ -520,10 +558,11 @@ export default function MedicationsPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">
-                    Prescribed By
+                    Added By
                   </p>
                   <p className="mt-1 text-sm text-gray-900">
-                    {selectedMedication.prescribedBy}
+                    {selectedMedication.doctor ? `Dr. ${selectedMedication.doctor.firstName} ${selectedMedication.doctor.lastName}` : 
+                     patient?.user ? `Pt. ${patient.user.firstName} ${patient.user.lastName}` : 'Added by Me'}
                   </p>
                 </div>
                 <div>
@@ -554,7 +593,7 @@ export default function MedicationsPage() {
                 </p>
               </div>
 
-              {selectedMedication.status === "active" &&
+              {getActualStatus(selectedMedication) === "active" &&
                 selectedMedication.refillsRemaining > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
                     <div className="flex">
@@ -591,7 +630,7 @@ export default function MedicationsPage() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-              {selectedMedication.status === "active" &&
+              {getActualStatus(selectedMedication) === "active" &&
                 selectedMedication.refillsRemaining > 0 && (
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300">
                     Request Refill
@@ -823,23 +862,29 @@ export default function MedicationsPage() {
 
       {/* Success Popup */}
       {showSuccessPopup && (
-        <div className="fixed top-4 right-4 z-50 animate-fade-in">
-          <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <div>
-              <p className="font-medium">Medication Added Successfully!</p>
-              <p className="text-sm text-green-100">Your medication has been added to your list.</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-4">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+                Medication Added Successfully!
+              </h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Your medication has been added to your list and is now active.
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowSuccessPopup(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Continue
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setShowSuccessPopup(false)}
-              className="text-green-100 hover:text-white"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </div>
       )}

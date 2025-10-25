@@ -40,11 +40,21 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
     }
 
     if (!response.ok) {
-      console.log(response);
+      console.log('API Response Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        data: data,
+        dataType: typeof data,
+        errorField: data?.error,
+        messageField: data?.message
+      });
+      
       // Handle authorization errors specially
       if (response.status === 401 || response.status === 403) {
-        const errorMessage = data?.error || "Authentication failed";
-        console.error("Authorization error:", errorMessage);
+        const authErrorMessage = data?.error || "Authentication failed";
+        const safeAuthErrorMessage = typeof authErrorMessage === 'string' ? authErrorMessage : 'Authentication failed';
+        console.error("Authorization error:", safeAuthErrorMessage);
         // Clear invalid token
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -58,10 +68,26 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         ) {
           window.location.href = "/login";
         }
+        
+        throw new Error(safeAuthErrorMessage);
       }
-      throw new Error(
-        data?.error || `API request failed with status ${response.status}`
-      );
+      
+      // For server errors (5xx), return a structured error response instead of throwing
+      if (response.status >= 500) {
+        const errorMessage = data?.error || data?.message || `Server error (${response.status})`;
+        console.error("Server error for", response.url, ":", errorMessage);
+        console.error("Full response data:", data);
+        return {
+          success: false,
+          error: errorMessage,
+          data: null
+        };
+      }
+      
+      // For other client errors (4xx), throw as before
+      const errorMessage = data?.error || data?.message || `API request failed with status ${response.status}`;
+      const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : 'Unknown API error';
+      throw new Error(safeErrorMessage);
     }
 
     return data;
@@ -73,7 +99,14 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         "Network error: Unable to reach the server. Please check your connection or server status."
       );
     }
-    console.error("API Error:", error);
+    
+    // Log more details about the error for debugging
+    console.error("API Error Details:", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
     throw error;
   }
 };
@@ -108,10 +141,7 @@ export const patientApi = {
 
   // Update current patient profile
   updateMyProfile: (profileData) =>
-    apiRequest("/patients/me", {
-      method: "PUT",
-      body: JSON.stringify(profileData),
-    }),
+    put("/patients/me", profileData, profileData instanceof FormData),
 
   // Get patient dashboard data
   getDashboard: () => apiRequest("/patients/dashboard"),
@@ -192,6 +222,7 @@ export const doctorApi = {
     if (filters.date) qs.set("date", filters.date);
     if (filters.startTime) qs.set("startTime", filters.startTime);
     if (filters.endTime) qs.set("endTime", filters.endTime);
+    if (filters.specialization) qs.set("specialization", filters.specialization);
 
     // Do NOT pass filters in the path; use query string
     return apiRequest(`/doctors/available?${qs.toString()}`, { method: "GET" });
@@ -289,6 +320,12 @@ export const appointmentApi = {
 
   // Get appointment details
   getAppointment: (id) => apiRequest(`/appointments/${id}`),
+
+  // Mark appointment as completed (for doctors)
+  markCompleted: (id) =>
+    apiRequest(`/appointments/${id}/complete`, {
+      method: "PUT",
+    }),
 };
 
 // Medication API functions
@@ -329,11 +366,17 @@ export const medicationApi = {
 
 // Feedback API functions
 export const feedbackApi = {
+  // Get appointments that need feedback (completed appointments without feedback)
+  getAppointmentsNeedingFeedback: () => apiRequest("/feedback/patient/appointments"),
+
   // Get all feedback for the current patient
   getMyFeedback: () => apiRequest("/feedback/me"),
 
   // Get all feedback for a specific doctor
   getDoctorFeedback: (doctorId) => apiRequest(`/feedback/doctor/${doctorId}`),
+
+  // Get all feedback (admin view)
+  getAllFeedback: () => apiRequest("/feedback"),
 
   // Submit new feedback
   submitFeedback: (feedbackData) =>
@@ -354,10 +397,6 @@ export const feedbackApi = {
     apiRequest(`/feedback/${id}`, {
       method: "DELETE",
     }),
-
-  // Get appointments that need feedback
-  getAppointmentsNeedingFeedback: () =>
-    apiRequest("/appointments/needFeedback"),
 };
 
 // Notification preferences API functions

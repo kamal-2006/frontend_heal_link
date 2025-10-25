@@ -68,8 +68,30 @@ export default function PatientDashboard() {
 
     const handleAppointmentBooked = async (event) => {
       console.log('🎉 Appointment booked event received in dashboard:', event.detail);
-      // Trigger full refresh using SWR mutate
-      console.log('🔄 Triggering full dashboard refresh...');
+      // Small delay to ensure backend has processed the appointment
+      setTimeout(async () => {
+        console.log('🔄 Triggering full dashboard refresh...');
+        await refresh();
+        setRefreshKey(prev => prev + 1);
+        
+        // Also update the local appointments state immediately if we have the new appointment data
+        if (event.detail && event.detail._id) {
+          setAppointments(prevAppointments => {
+            // Check if appointment already exists
+            const exists = prevAppointments.some(apt => apt._id === event.detail._id);
+            if (!exists) {
+              return [...prevAppointments, event.detail];
+            }
+            return prevAppointments;
+          });
+        }
+      }, 500); // 500ms delay to ensure backend has processed
+    };
+
+    const handleMedicationAdded = async (event) => {
+      console.log('💊 Medication added event received in dashboard:', event.detail);
+      // Trigger full refresh to update medications count
+      console.log('🔄 Triggering dashboard refresh for medication update...');
       await refresh();
       setRefreshKey(prev => prev + 1);
     };
@@ -77,11 +99,13 @@ export default function PatientDashboard() {
     window.addEventListener('medicalReportDeleted', handleReportDeleted);
     window.addEventListener('medicalReportUploaded', handleReportUploaded);
     window.addEventListener('appointmentBooked', handleAppointmentBooked);
+    window.addEventListener('medicationAdded', handleMedicationAdded);
 
     return () => {
       window.removeEventListener('medicalReportDeleted', handleReportDeleted);
       window.removeEventListener('medicalReportUploaded', handleReportUploaded);
       window.removeEventListener('appointmentBooked', handleAppointmentBooked);
+      window.removeEventListener('medicationAdded', handleMedicationAdded);
     };
   }, []);
 
@@ -167,8 +191,25 @@ export default function PatientDashboard() {
     .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
     .slice(0, 3);
 
-  // Get active medications count
-  const activeMedications = prescriptions || [];
+  // Get active medications count using actual status calculation
+  const getActualStatus = (medication) => {
+    if (!medication.endDate) {
+      return medication.status || "active"; // No end date means ongoing
+    }
+    
+    const today = new Date();
+    const endDate = new Date(medication.endDate);
+    
+    // If end date has passed, medication should be completed/expired
+    if (endDate < today) {
+      return "completed";
+    }
+    
+    // If medication has an end date but hasn't reached it yet
+    return medication.status || "active";
+  };
+
+  const activeMedications = (prescriptions || []).filter(med => getActualStatus(med) === "active");
 
   // Count unread reports (adjust for real data structure)
   const unreadReportsCount = (reports || []).filter(report => report.status === 'new').length;
@@ -449,7 +490,7 @@ export default function PatientDashboard() {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto"></div>
             </div>
           ) : activeMedications.length > 0 ? (
-            activeMedications.map((medication, index) => (
+            activeMedications.slice(0, 3).map((medication, index) => (
               <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors duration-150">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center">
