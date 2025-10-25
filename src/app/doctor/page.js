@@ -6,6 +6,8 @@ import { toTitleCase } from '../../../utils/text';
 import { get } from '@/utils/api';
 import Link from 'next/link';
 
+import useDoctorDashboard from '@/hooks/useDoctorDashboard';
+
 export default function DoctorDashboard() {
   const { user, loading: userLoading } = useUser();
   const [stats, setStats] = useState({
@@ -121,7 +123,7 @@ export default function DoctorDashboard() {
                     Today&apos;s Appointments
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.appointmentsToday}
+                    {appointmentsToday}
                   </p>
                 </div>
               </div>
@@ -150,7 +152,7 @@ export default function DoctorDashboard() {
                     Total Patients
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.totalPatients}
+                    {totalPatients}
                   </p>
                 </div>
               </div>
@@ -179,7 +181,7 @@ export default function DoctorDashboard() {
                     Pending Reviews
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stats.pendingReviews}
+                    {pendingReviews}
                   </p>
                 </div>
               </div>

@@ -8,98 +8,37 @@ import { toTitleCase } from '../../../utils/text';
 import usePatient from '../../../hooks/usePatient';
 import { patientApi, appointmentApi } from '../../../utils/api';
 
+import usePatientDashboard from '../../../hooks/usePatientDashboard';
+
 export default function PatientDashboard() {
   const router = useRouter();
+  
+  // State for refreshing data
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { data, isLoading, isError, refresh } = usePatientDashboard(refreshKey);
+  const { appointments: hookAppointments, prescriptions, reports: hookReports, notifications, dashboardData } = data || {};
   const { patient, loading: patientLoading, error: patientError } = usePatient();
-  const [appointments, setAppointments] = useState([]);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [reports, setReports] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [cancellingId, setCancellingId] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // State for cancel appointment modal
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [showReasonDialog, setShowReasonDialog] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Force refresh trigger
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const [reports, setReports] = useState(hookReports || []);
+  const [appointments, setAppointments] = useState(hookAppointments || []);
 
+  // Update local state when hook data changes
   useEffect(() => {
-    console.log('🔄 Dashboard useEffect triggered, refreshKey:', refreshKey);
-    
-    const fetchData = async () => {
-      const token = localStorage.getItem('token');
-      const role = localStorage.getItem('role');
-      
-      console.log('🔍 Token exists:', !!token, 'Role:', role);
-      
-      if (!token || role !== 'patient') {
-        router.push('/login');
-        return;
-      }
-
-      // Check if appointment was just booked
-      const justBooked = localStorage.getItem('appointmentJustBooked');
-      if (justBooked === 'true') {
-        console.log('🎉 Detected new appointment booking, will refresh data!');
-        localStorage.removeItem('appointmentJustBooked');
-      }
-
-      try {
-        console.log('📡 Fetching dashboard data...');
-        // Fetch patient-specific data
-        const { appointmentApi, medicationApi, reportsApi } = await import('../../../utils/api');
-        const [appointmentsRes, medicationsRes, notificationsRes, dashboardRes, reportsRes] = await Promise.all([
-          appointmentApi.getMyAppointments().catch(() => ({ data: [] })),
-          medicationApi.getMyActiveMedications().catch(() => ({ data: [] })),
-          fetch('http://localhost:5000/api/v1/notifications/patient', {
-            headers: { Authorization: `Bearer ${token}` }
-          }).then(res => res.json()).catch(() => ({ data: [] })),
-          patientApi.getDashboard().catch(() => ({ data: null, error: 'Network error' })),
-          reportsApi.getMyReports().catch(() => ({ data: [] }))
-        ]);
-
-        console.log('✅ Appointments fetched:', appointmentsRes?.data?.length || 0, 'appointments');
-        setAppointments(appointmentsRes?.data || []);
-        setPrescriptions(medicationsRes?.data || []);
-        setNotifications(notificationsRes?.data || []);
-        setReports(reportsRes?.data || []);
-
-        // dashboardRes may be { data: null, error, status } when patient not found
-        if (dashboardRes && typeof dashboardRes === 'object') {
-          setDashboardData(dashboardRes.data ?? null);
-          if (dashboardRes.error) {
-            console.warn('Patient dashboard error:', dashboardRes.error);
-          }
-        } else {
-          setDashboardData(null);
-        }
-        
-        console.log('✅ All dashboard data loaded successfully!');
-      } catch (error) {
-        console.error('❌ Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-    
-    // Also fetch data when page becomes visible (user returns from booking page)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('📱 Page became visible, refreshing data...');
-        setRefreshKey(prev => prev + 1); // Trigger refresh
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [router, refreshKey]);
+    if (hookAppointments) {
+      setAppointments(hookAppointments);
+    }
+    if (hookReports) {
+      setReports(hookReports);
+    }
+  }, [hookAppointments, hookReports]);
 
   // Listen for medical report changes
   useEffect(() => {
@@ -129,24 +68,49 @@ export default function PatientDashboard() {
 
     const handleAppointmentBooked = async (event) => {
       console.log('🎉 Appointment booked event received in dashboard:', event.detail);
-      // Trigger full refresh
-      console.log('� Triggering full dashboard refresh...');
+      // Small delay to ensure backend has processed the appointment
+      setTimeout(async () => {
+        console.log('🔄 Triggering full dashboard refresh...');
+        await refresh();
+        setRefreshKey(prev => prev + 1);
+        
+        // Also update the local appointments state immediately if we have the new appointment data
+        if (event.detail && event.detail._id) {
+          setAppointments(prevAppointments => {
+            // Check if appointment already exists
+            const exists = prevAppointments.some(apt => apt._id === event.detail._id);
+            if (!exists) {
+              return [...prevAppointments, event.detail];
+            }
+            return prevAppointments;
+          });
+        }
+      }, 500); // 500ms delay to ensure backend has processed
+    };
+
+    const handleMedicationAdded = async (event) => {
+      console.log('💊 Medication added event received in dashboard:', event.detail);
+      // Trigger full refresh to update medications count
+      console.log('🔄 Triggering dashboard refresh for medication update...');
+      await refresh();
       setRefreshKey(prev => prev + 1);
     };
 
     window.addEventListener('medicalReportDeleted', handleReportDeleted);
     window.addEventListener('medicalReportUploaded', handleReportUploaded);
     window.addEventListener('appointmentBooked', handleAppointmentBooked);
+    window.addEventListener('medicationAdded', handleMedicationAdded);
 
     return () => {
       window.removeEventListener('medicalReportDeleted', handleReportDeleted);
       window.removeEventListener('medicalReportUploaded', handleReportUploaded);
       window.removeEventListener('appointmentBooked', handleAppointmentBooked);
+      window.removeEventListener('medicationAdded', handleMedicationAdded);
     };
   }, []);
 
   const handleCancelAppointment = async (appointmentId) => {
-    const appointment = appointments.find(apt => apt._id === appointmentId);
+    const appointment = (appointments || []).find(apt => apt._id === appointmentId);
     setAppointmentToCancel(appointment);
     setCancellationReason('');
     setShowReasonDialog(true);
@@ -215,7 +179,7 @@ export default function PatientDashboard() {
   };
 
   // Get upcoming appointments (max 3) - latest booked first
-  const upcomingAppointments = appointments
+  const upcomingAppointments = (appointments || [])
     .filter(app => {
       const appointmentDate = new Date(app.date);
       const now = new Date();
@@ -227,11 +191,28 @@ export default function PatientDashboard() {
     .sort((a, b) => new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id))
     .slice(0, 3);
 
-  // Get active medications count
-  const activeMedications = prescriptions || [];
+  // Get active medications count using actual status calculation
+  const getActualStatus = (medication) => {
+    if (!medication.endDate) {
+      return medication.status || "active"; // No end date means ongoing
+    }
+    
+    const today = new Date();
+    const endDate = new Date(medication.endDate);
+    
+    // If end date has passed, medication should be completed/expired
+    if (endDate < today) {
+      return "completed";
+    }
+    
+    // If medication has an end date but hasn't reached it yet
+    return medication.status || "active";
+  };
+
+  const activeMedications = (prescriptions || []).filter(med => getActualStatus(med) === "active");
 
   // Count unread reports (adjust for real data structure)
-  const unreadReportsCount = reports.filter(report => report.status === 'new').length;
+  const unreadReportsCount = (reports || []).filter(report => report.status === 'new').length;
 
   return (
     <div className="space-y-4">
@@ -395,7 +376,7 @@ export default function PatientDashboard() {
             <h3 className="text-lg font-medium text-gray-900">Recent Notifications</h3>
           </div>
           <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
-            {notifications.slice(0, 5).map((notification, index) => (
+            {(notifications || []).slice(0, 5).map((notification, index) => (
               <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start space-x-3">
                   <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
@@ -509,7 +490,7 @@ export default function PatientDashboard() {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto"></div>
             </div>
           ) : activeMedications.length > 0 ? (
-            activeMedications.map((medication, index) => (
+            activeMedications.slice(0, 3).map((medication, index) => (
               <div key={index} className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors duration-150">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center">

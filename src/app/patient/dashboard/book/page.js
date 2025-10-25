@@ -65,18 +65,31 @@ export default function PatientBookPage() {
     try {
       // Fetch available doctors based on criteria
       setLoadingDoctors(true);
-      console.log('Fetching doctors with criteria:', { date: formData.preferredDate, time: formData.preferredTime, specialization: formData.specialization });
-      
-      // Build query string
-      const queryParams = new URLSearchParams({
-        date: formData.preferredDate,
-        time: formData.preferredTime,
-        specialization: formData.specialization
+      console.log('Fetching doctors with criteria:', { 
+        date: formData.preferredDate, 
+        time: formData.preferredTime, 
+        specialization: formData.specialization 
       });
       
-      // API call to fetch doctors using the proper API function
-      const data = await doctorApi.getAvailableDoctors(`?${queryParams.toString()}`);
+      // Calculate end time (assuming 30-minute appointments) with proper minute carry
+      const startTime = formData.preferredTime;
+      const [hours, minutes] = startTime.split(':');
+      const startHoursNum = parseInt(hours, 10);
+      const startMinutesNum = parseInt(minutes, 10);
+      const totalMinutes = startHoursNum * 60 + startMinutesNum + 30;
+      const endHoursNum = Math.floor(totalMinutes / 60);
+      const endMinutesNum = totalMinutes % 60;
+      const endTime = `${String(endHoursNum).padStart(2, '0')}:${String(endMinutesNum).padStart(2, '0')}`;
+      
+      // API call to fetch doctors using the proper API function with object parameters
+      const data = await doctorApi.getAvailableDoctors({
+        date: formData.preferredDate,
+        startTime: startTime,
+        endTime: endTime,
+        specialization: formData.specialization
+      });
       console.log('Available doctors response:', data);
+      console.log('Number of doctors returned:', data.data ? data.data.length : 0);
       
       setAvailableDoctors(data.data || []);
       
@@ -103,25 +116,35 @@ export default function PatientBookPage() {
     
     try {
       // Debug logging
-      console.log('🔍 DEBUG: Starting appointment booking...');
-      console.log('🔍 DEBUG: Doctor ID:', doctorId);
-      console.log('🔍 DEBUG: Form Data:', formData);
-      console.log('🔍 DEBUG: Token:', localStorage.getItem('token') ? 'EXISTS' : 'MISSING');
-      console.log('🔍 DEBUG: User Role:', localStorage.getItem('role'));
+      console.log('Starting appointment booking...');
+      console.log('Doctor ID:', doctorId);
+      console.log('Form Data:', formData);
       
       // API call to book appointment using the proper API function
+      // Construct a proper ISO date string
+      const appointmentDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}:00`);
+      
+      // Validate the date before sending
+      if (isNaN(appointmentDateTime.getTime())) {
+        setMessage({ 
+          type: "error", 
+          text: "Invalid date or time selected. Please check your inputs." 
+        });
+        setLoading(false);
+        return;
+      }
+      
       const appointmentData = {
         doctor: doctorId,
-        date: `${formData.preferredDate}T${formData.preferredTime}:00`,
+        date: appointmentDateTime.toISOString(),
         reason: formData.reason,
         notes: formData.notes || ''
       };
       
-      console.log('🔍 DEBUG: Appointment data being sent:', appointmentData);
-      console.log('🔍 DEBUG: Making API call to:', 'http://localhost:5000/api/v1/appointments/book');
+      console.log('Appointment data being sent:', appointmentData);
       
       const response = await appointmentApi.bookAppointment(appointmentData);
-      console.log('🔍 DEBUG: Appointment booking response:', response);
+      console.log('Appointment booking response:', response);
       
       setMessage({ 
         type: "success", 
@@ -129,12 +152,12 @@ export default function PatientBookPage() {
       });
       
       // Dispatch custom event to notify other components
-      console.log('🔔 Dispatching appointmentBooked event with data:', response.data);
+      console.log('Dispatching appointmentBooked event with data:', response.data);
       const event = new CustomEvent('appointmentBooked', { 
         detail: response.data 
       });
       window.dispatchEvent(event);
-      console.log('✅ appointmentBooked event dispatched successfully!');
+      console.log('appointmentBooked event dispatched successfully!');
       
       // Set flag in localStorage so dashboard knows to refresh
       localStorage.setItem('appointmentJustBooked', 'true');

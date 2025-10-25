@@ -19,9 +19,9 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [pendingToken, setPendingToken] = useState(null);
-  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [tempUserId, setTempUserId] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -37,20 +37,36 @@ export default function Login() {
     setError("");
 
     try {
+      const requestBody = {
+        email: formData.email,
+        password: formData.password,
+      };
+
+      // If 2FA is required, include the code
+      if (requiresTwoFactor && twoFactorCode) {
+        requestBody.twoFactorCode = twoFactorCode;
+      }
+
       const res = await fetch("http://localhost:5000/api/v1/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();
 
       if (res.ok) {
+        // Check if 2FA is required
+        if (data.requiresTwoFactor) {
+          setRequiresTwoFactor(true);
+          setTempUserId(data.tempUserId);
+          setError(""); // Clear any previous errors
+          return;
+        }
+
+        // Successful login
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
         
@@ -59,7 +75,7 @@ export default function Login() {
         if (data.role === 'admin') {
           router.push('/admin');
         } else if (data.role === 'doctor') {
-          router.push('/doctor/dashboard');
+          router.push('/doctor');
         } else if (data.role === 'patient') {
           router.push('/patient/dashboard');
         } else if (data.role === 'nurse') {
@@ -76,6 +92,13 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBackTo2FA = () => {
+    setRequiresTwoFactor(false);
+    setTwoFactorCode("");
+    setTempUserId(null);
+    setError("");
   };
 
   return (
@@ -203,43 +226,94 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Remember Me + Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="rememberMe"
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label
-                  htmlFor="rememberMe"
-                  className="ml-2 block text-sm text-gray-700"
-                >
-                  Remember me
-                </label>
+            {/* Two Factor Authentication Code */}
+            {requiresTwoFactor && (
+              <div className="relative">
+                <div className="mb-4 p-3 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span className="font-medium">Two-Factor Authentication Required</span>
+                  </div>
+                  <p className="mt-2 text-sm">
+                    Please open your Microsoft Authenticator app and enter the 6-digit code.
+                  </p>
+                </div>
+                <div className="relative border-2 border-gray-300 rounded-lg focus-within:border-blue-500 transition-colors">
+                  <input
+                    id="twoFactorCode"
+                    name="twoFactorCode"
+                    type="text"
+                    maxLength="6"
+                    autoComplete="one-time-code"
+                    required
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    className="block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 peer text-center text-2xl tracking-widest font-mono"
+                    placeholder=" "
+                  />
+                  <label
+                    htmlFor="twoFactorCode"
+                    className="absolute left-4 top-4 text-gray-500 text-sm transition-all duration-200 origin-left peer-focus:-translate-y-2 peer-focus:scale-75 peer-focus:text-blue-600 peer-[:not(:placeholder-shown)]:-translate-y-2 peer-[:not(:placeholder-shown)]:scale-75 peer-[:not(:placeholder-shown)]:text-blue-600"
+                  >
+                    6-Digit Authentication Code
+                  </label>
+                </div>
+                <div className="mt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={handleBackTo2FA}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    ← Back to login form
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="text-sm">
-                <a
-                  href="#"
-                  className="font-medium text-blue-600 hover:text-blue-500"
-                >
-                  Forgot password?
-                </a>
+            {/* Remember Me + Forgot Password */}
+            {!requiresTwoFactor && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="rememberMe"
+                    name="rememberMe"
+                    type="checkbox"
+                    checked={formData.rememberMe}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
+                    Remember me
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <a
+                    href="#"
+                    className="font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Forgot password?
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Sign In Button */}
             <div>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || (requiresTwoFactor && twoFactorCode.length !== 6)}
                 className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
               >
-                {isLoading ? "Signing in..." : "Sign in"}
+                {isLoading 
+                  ? (requiresTwoFactor ? "Verifying..." : "Signing in...") 
+                  : (requiresTwoFactor ? "Verify Code" : "Sign in")
+                }
               </button>
             </div>
 
@@ -286,9 +360,9 @@ export default function Login() {
                         return;
                       }
                       localStorage.setItem("token", data.token);
-                      localStorage.setItem("role", data.role || "patient");
-                      setPendingToken(data.token);
-                      setShowRoleDialog(true);
+                      localStorage.setItem("role", "patient");
+                      // Automatically redirect to patient dashboard for Google sign-in
+                      router.push("/patient/dashboard");
                     } catch (e) {
                       setError("Google sign-in error");
                     }
@@ -326,105 +400,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-
-      {/* Role Selection Dialog */}
-      {showRoleDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Continue as
-            </h3>
-            <p className="text-gray-600 mb-6">Choose your role to proceed.</p>
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                disabled={isUpdatingRole}
-                onClick={async () => {
-                  if (!pendingToken) return;
-                  try {
-                    setIsUpdatingRole(true);
-                    const res = await fetch(
-                      `${
-                        process.env.NEXT_PUBLIC_API_BASE_URL ||
-                        "http://localhost:5000"
-                      }/api/v1/auth/update-role`,
-                      {
-                        method: "PUT",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${pendingToken}`,
-                        },
-                        body: JSON.stringify({ role: "doctor" }),
-                      }
-                    );
-                    const data = await res.json();
-                    if (!res.ok) {
-                      setError(data.error || "Failed to update role");
-                      setIsUpdatingRole(false);
-                      return;
-                    }
-                    localStorage.setItem("role", data.data.role);
-                    setShowRoleDialog(false);
-                    router.push("/doctor/dashboard");
-                  } catch (e) {
-                    setError("Failed to update role");
-                  } finally {
-                    setIsUpdatingRole(false);
-                  }
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isUpdatingRole ? "Continuing…" : "Doctor"}
-              </button>
-              <button
-                disabled={isUpdatingRole}
-                onClick={async () => {
-                  if (!pendingToken) return;
-                  try {
-                    setIsUpdatingRole(true);
-                    const res = await fetch(
-                      `${
-                        process.env.NEXT_PUBLIC_API_BASE_URL ||
-                        "http://localhost:5000"
-                      }/api/v1/auth/update-role`,
-                      {
-                        method: "PUT",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${pendingToken}`,
-                        },
-                        body: JSON.stringify({ role: "patient" }),
-                      }
-                    );
-                    const data = await res.json();
-                    if (!res.ok) {
-                      setError(data.error || "Failed to update role");
-                      setIsUpdatingRole(false);
-                      return;
-                    }
-                    localStorage.setItem("role", data.data.role);
-                    setShowRoleDialog(false);
-                    router.push("/patient/dashboard");
-                  } catch (e) {
-                    setError("Failed to update role");
-                  } finally {
-                    setIsUpdatingRole(false);
-                  }
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:opacity-50"
-              >
-                {isUpdatingRole ? "Continuing…" : "Patient"}
-              </button>
-              <button
-                disabled={isUpdatingRole}
-                onClick={() => setShowRoleDialog(false)}
-                className="w-full py-2 px-4 rounded-xl text-gray-500 hover:text-gray-700"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
