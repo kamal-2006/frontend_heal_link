@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import useUser from '../../../hooks/useUser';
-import { toTitleCase } from '../../../utils/text';
+import useUser from '@/hooks/useUser';
+import { toTitleCase } from '@/utils/text';
 import { get } from '@/utils/api';
 import Link from 'next/link';
 
@@ -123,7 +123,7 @@ export default function DoctorDashboard() {
                     Today&apos;s Appointments
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {appointmentsToday}
+                    {stats.appointmentsToday}
                   </p>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export default function DoctorDashboard() {
                     Total Patients
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {totalPatients}
+                    {stats.totalPatients}
                   </p>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function DoctorDashboard() {
                     Pending Reviews
                   </h2>
                   <p className="text-3xl font-bold text-gray-900">
-                    {pendingReviews}
+                    {stats.pendingReviews}
                   </p>
                 </div>
               </div>

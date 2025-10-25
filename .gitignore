@@ -42,3 +42,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# test files and unwanted files
+test*.js
+*test*.js
+*-test.js
+*debug*.js
+*summary*.js
