@@ -1,26 +1,68 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
-import useUser from "@/hooks/useUser";
-import { toTitleCase } from "@/utils/text";
-import { get } from "@/utils/api";
+import { useState, useEffect } from 'react';
+import useUser from '../../../hooks/useUser';
+import { toTitleCase } from '../../../utils/text';
+import { get } from '@/utils/api';
 import Link from 'next/link';
 
 import useDoctorDashboard from '@/hooks/useDoctorDashboard';
 
 export default function DoctorDashboard() {
   const { user, loading: userLoading } = useUser();
-  const router = useRouter();
-  const { data: stats = {}, isLoading, isError } = useDoctorDashboard();
-  const { appointmentsToday = 0, totalPatients = 0, pendingReviews = 0, upcomingAppointments = [] } = stats;
+  const [stats, setStats] = useState({
+    appointmentsToday: 0,
+    totalPatients: 0,
+    pendingReviews: 0,
+    upcomingAppointments: [],
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const { data } = await get('/doctor/dashboard-data');
+
+        setStats({
+          appointmentsToday: data.appointmentsToday,
+          totalPatients: data.totalPatients,
+          pendingReviews: data.pendingReviews,
+          upcomingAppointments: data.upcomingAppointments.map((a) => ({
+            id: a._id,
+            patientName:
+              a.patient?.firstName && a.patient?.lastName
+                ? `${a.patient.firstName} ${a.patient.lastName}`
+                : 'N/A',
+            patientId: a.patient?.patientInfo?.patientId || 'N/A', // Added patientId
+            date: new Date(a.date).toISOString().split('T')[0], // YYYY-MM-DD
+            time: new Date(a.date).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            type: a.reason, // Use appointment reason
+            status: a.status,
+          })),
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome, Dr. {toTitleCase(user?.firstName)}{" "}
+            Welcome, Dr. {toTitleCase(user?.firstName)}{' '}
             {toTitleCase(user?.lastName)}!
           </h1>
           <p className="text-sm text-gray-500">
@@ -28,11 +70,11 @@ export default function DoctorDashboard() {
           </p>
         </div>
         <p className="text-sm text-gray-500">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
+          {new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
           })}
         </p>
       </div>
@@ -77,7 +119,9 @@ export default function DoctorDashboard() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h2 className="text-sm font-medium text-gray-500">Today&apos;s Appointments</h2>
+                  <h2 className="text-sm font-medium text-gray-500">
+                    Today&apos;s Appointments
+                  </h2>
                   <p className="text-3xl font-bold text-gray-900">
                     {appointmentsToday}
                   </p>
@@ -145,39 +189,43 @@ export default function DoctorDashboard() {
           </div>
 
           {/* Upcoming Appointments */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
             <div className="px-6 py-5 border-b border-gray-100">
               <h3 className="text-lg font-medium text-gray-900">
                 Upcoming Appointments
               </h3>
             </div>
             <div className="divide-y divide-gray-100">
-              {upcomingAppointments.length > 0 ? (
-                upcomingAppointments.map((appointment) => (
+              {stats.upcomingAppointments.length > 0 ? (
+                stats.upcomingAppointments.map((appointment, index) => (
                   <div
-                    key={appointment.id}
+                    key={index}
                     className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150"
                   >
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-medium">
                         {appointment.patientName
-                          .split(" ")
+                          .split(' ')
                           .map((name) => name[0])
-                          .join("")}
+                          .join('')}
                       </div>
                       <div className="ml-4">
                         <h4 className="text-sm font-medium text-gray-900">
                           {appointment.patientName}
                         </h4>
                         <p className="text-sm text-gray-500">
+                          ID: {appointment.patientId}
+                        </p>
+                        <p className="text-sm text-gray-500">
                           {appointment.type}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-sm text-gray-500">
-                        {appointment.time}
-                      </span>
+                      <div className="flex flex-col text-sm text-gray-500">
+                        <span>{appointment.date}</span>
+                        <span>{appointment.time}</span>
+                      </div>
                       <button className="ml-6 text-blue-600 hover:text-blue-800">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -203,12 +251,12 @@ export default function DoctorDashboard() {
               )}
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <a
-                href="/doctor/appointments"
+              <Link
+                href="/doctor/dashboard/appointments"
                 className="text-sm font-medium text-blue-600 hover:text-blue-800"
               >
                 View all appointments
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -218,7 +266,10 @@ export default function DoctorDashboard() {
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link href="/doctor/book" className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              <Link
+                href="/doctor/appointments/new"
+                className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"
@@ -238,7 +289,10 @@ export default function DoctorDashboard() {
                 </span>
               </Link>
 
-              <button className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              <Link
+                href="/doctor/bulk-swap"
+                className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"
@@ -250,15 +304,18 @@ export default function DoctorDashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
                 <span className="mt-2 text-sm font-medium text-gray-700">
-                  Create Prescription
+                  Bulk Swap
                 </span>
-              </button>
+              </Link>
 
-              <button className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              <Link
+                href="/doctor/appointments"
+                className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"
@@ -276,9 +333,11 @@ export default function DoctorDashboard() {
                 <span className="mt-2 text-sm font-medium text-gray-700">
                   Schedule
                 </span>
-              </button>
-
-              <button className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center">
+              </Link>
+              <Link
+                href="/doctor/feedback"
+                className="p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors duration-150 flex flex-col items-center justify-center"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-blue-600"
@@ -294,9 +353,9 @@ export default function DoctorDashboard() {
                   />
                 </svg>
                 <span className="mt-2 text-sm font-medium text-gray-700">
-                  Reports
+                  Feedback
                 </span>
-              </button>
+              </Link>
             </div>
           </div>
         </>

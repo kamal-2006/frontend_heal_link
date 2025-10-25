@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { get, put } from "@/utils/api";
 
 export default function DoctorFeedback() {
   const [feedback, setFeedback] = useState([]);
@@ -12,74 +13,14 @@ export default function DoctorFeedback() {
   // Simulate fetching feedback data
   useEffect(() => {
     const fetchFeedback = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        const mockFeedback = [
-          {
-            id: 1,
-            patientName: "Sarah Johnson",
-            patientId: "P10045",
-            rating: 5,
-            comment: "Dr. Doe was extremely thorough and took the time to explain my condition in detail. I felt very comfortable and well-cared for during my appointment.",
-            date: "2023-07-10",
-            appointmentType: "Check-up",
-            read: true
-          },
-          {
-            id: 2,
-            patientName: "Michael Chen",
-            patientId: "P10046",
-            rating: 4,
-            comment: "Very professional and knowledgeable. The only reason I'm not giving 5 stars is because I had to wait a bit longer than expected.",
-            date: "2023-07-08",
-            appointmentType: "Follow-up",
-            read: false
-          },
-          {
-            id: 3,
-            patientName: "Emma Davis",
-            patientId: "P10047",
-            rating: 5,
-            comment: "Dr. Doe is the best! He really listened to my concerns and provided excellent care. I would highly recommend him to anyone looking for a cardiologist.",
-            date: "2023-07-05",
-            appointmentType: "Consultation",
-            read: true
-          },
-          {
-            id: 4,
-            patientName: "Robert Wilson",
-            patientId: "P10048",
-            rating: 3,
-            comment: "The doctor was good, but I felt rushed during my appointment. Would appreciate more time for questions in the future.",
-            date: "2023-07-01",
-            appointmentType: "Check-up",
-            read: false
-          },
-          {
-            id: 5,
-            patientName: "Jennifer Lopez",
-            patientId: "P10049",
-            rating: 5,
-            comment: "Excellent care as always. Dr. Doe explains everything clearly and makes sure I understand my treatment plan.",
-            date: "2023-06-28",
-            appointmentType: "Follow-up",
-            read: true
-          },
-          {
-            id: 6,
-            patientName: "David Brown",
-            patientId: "P10050",
-            rating: 4,
-            comment: "Very thorough examination and clear explanations. The office staff was also very helpful and friendly.",
-            date: "2023-06-25",
-            appointmentType: "Consultation",
-            read: true
-          }
-        ];
-        
-        setFeedback(mockFeedback);
+      try {
+        const { data } = await get("/feedback/doctor/me");
+        setFeedback(data || []);
+      } catch (error) {
+        console.error("Error fetching feedback:", error);
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     };
 
     fetchFeedback();
@@ -93,20 +34,34 @@ export default function DoctorFeedback() {
     return true;
   });
 
-  const handleViewFeedback = (feedbackItem) => {
+  const handleViewFeedback = async (feedbackItem) => { // Added async
     setSelectedFeedback(feedbackItem);
     setIsModalOpen(true);
     
     // Mark as read when viewed
     if (!feedbackItem.read) {
-      setFeedback(feedback.map(item => 
-        item.id === feedbackItem.id ? { ...item, read: true } : item
-      ));
+      try {
+        await put(`/feedback/${feedbackItem._id}/read`, { read: true });
+        setFeedback(feedback.map(item => 
+          item._id === feedbackItem._id ? { ...item, read: true } : item
+        ));
+      } catch (error) {
+        console.error("Error marking feedback as read:", error);
+      }
     }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const getAverageRating = () => {
@@ -245,23 +200,19 @@ export default function DoctorFeedback() {
           {filteredFeedback.length > 0 ? (
             filteredFeedback.map((item) => (
               <div 
-                key={item.id} 
+                key={item._id} 
                 className={`px-6 py-4 hover:bg-gray-50 transition-colors duration-150 cursor-pointer ${!item.read ? "bg-blue-50" : ""}`}
                 onClick={() => handleViewFeedback(item)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-medium">
-                      {item.patientName.split(' ').map(name => name[0]).join('')}
-                    </div>
-                    <div className="ml-4">
+                    <div>
                       <div className="flex items-center">
-                        <h4 className="text-sm font-medium text-gray-900">{item.patientName}</h4>
+                        <h4 className="text-sm font-medium text-gray-900">{formatDate(item.createdAt)}</h4>
                         {!item.read && (
                           <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">New</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">{new Date(item.date).toLocaleDateString()} • {item.appointmentType}</p>
                     </div>
                   </div>
                   <div className="flex">
@@ -296,26 +247,12 @@ export default function DoctorFeedback() {
             </div>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-medium text-lg">
-                    {selectedFeedback.patientName.split(' ').map(name => name[0]).join('')}
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="text-lg font-medium text-gray-900">{selectedFeedback.patientName}</h4>
-                    <p className="text-sm text-gray-500">Patient ID: {selectedFeedback.patientId}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-start">
                   <div className="flex mb-1">
                     {renderStars(selectedFeedback.rating)}
                   </div>
-                  <p className="text-sm text-gray-500">{new Date(selectedFeedback.date).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-500">{formatDate(selectedFeedback.createdAt)}</p>
                 </div>
-              </div>
-              
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Appointment Type</h4>
-                <p className="text-gray-900">{selectedFeedback.appointmentType}</p>
               </div>
               
               <div className="mb-6">
