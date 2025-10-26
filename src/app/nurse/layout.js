@@ -4,38 +4,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useNurse from '../../hooks/useNurse';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function NurseLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   
   const profileDropdownRef = useRef(null);
-  const notificationDropdownRef = useRef(null);
   const router = useRouter();
   
   // Authentication protection
   const { nurse, loading, error } = useNurse();
-
-  // Mock notifications - move this hook before conditional returns
-  useEffect(() => {
-    setNotifications([
-      { id: 1, message: "Emergency patient admitted to Room 205", type: "urgent", time: "2 mins ago" },
-      { id: 2, message: "Lab results ready for Patient ID: P-1023", type: "info", time: "15 mins ago" },
-      { id: 3, message: "Dr. Smith requests vitals for Room 301", type: "request", time: "30 mins ago" },
-      { id: 4, message: "Appointment schedule updated", type: "info", time: "1 hour ago" }
-    ]);
-  }, []);
 
   // Click outside handler - move this hook before conditional returns
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
-      }
-      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
-        setNotificationDropdownOpen(false);
       }
     };
 
@@ -167,52 +152,13 @@ export default function NurseLayout({ children }) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <div className="relative" ref={notificationDropdownRef}>
-                <button
-                  onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {notifications.length}
-                    </span>
-                  )}
-                </button>
-
-                {notificationDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {notifications.map((notification) => (
-                        <div key={notification.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-900">{notification.message}</p>
-                              <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-4 border-t border-gray-200">
-                      <a href="/nurse/notifications" className="text-sm text-blue-600 hover:text-blue-700">
-                        View all notifications
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Real-Time Notification Bell */}
+              {nurse && (
+                <NotificationBell 
+                  userId={nurse._id} 
+                  role="nurse" 
+                />
+              )}
 
               {/* Profile Dropdown */}
               <div className="relative" ref={profileDropdownRef}>

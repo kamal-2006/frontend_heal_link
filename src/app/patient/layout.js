@@ -6,28 +6,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { toTitleCase } from '../../utils/text';
 import usePatient from '../../hooks/usePatient';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function PatientLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { patient, loading: patientLoading, error: patientError } = usePatient();
   const [loading, setLoading] = useState(true);
+  const [patientUser, setPatientUser] = useState(null);
 
   // Refs for click-outside functionality
-  const notificationRef = useRef(null);
   const profileRef = useRef(null);
-
-  // Sample notifications - in a real app, these would come from an API
-  const notifications = [
-    { id: 1, message: 'Your appointment with Dr. Smith is confirmed', time: '10 mins ago', read: false },
-    { id: 2, message: 'New lab report available', time: '1 hour ago', read: false },
-    { id: 3, message: 'Reminder: Take your medication', time: '3 hours ago', read: true },
-  ];
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,6 +33,11 @@ export default function PatientLayout({ children }) {
     
     setLoading(false);
     
+    // Fetch patient user data for notifications
+    if (patient && patient.user) {
+      setPatientUser(patient.user);
+    }
+    
     // Check if mobile on initial load
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -51,7 +49,7 @@ export default function PatientLayout({ children }) {
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
-  }, [router]);
+  }, [router, patient]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,9 +67,6 @@ export default function PatientLayout({ children }) {
   // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setNotificationsOpen(false);
-      }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
       }
@@ -87,14 +82,8 @@ export default function PatientLayout({ children }) {
     setSidebarOpen(!sidebarOpen);
   };
 
-  const toggleNotifications = () => {
-    setNotificationsOpen(!notificationsOpen);
-    setProfileOpen(false);
-  };
-
   const toggleProfile = () => {
     setProfileOpen(!profileOpen);
-    setNotificationsOpen(false);
   };
 
   const handleLogout = () => {
@@ -155,114 +144,8 @@ export default function PatientLayout({ children }) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Notification Bell */}
-              <div className="relative" ref={notificationRef}>
-                <button
-                  onClick={toggleNotifications}
-                  className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                  aria-label="Notifications"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
-                  {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow-sm">
-                      {notifications.filter(n => !n.read).length}
-                    </span>
-                  )}
-                </button>
-
-                {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white border border-gray-200 z-50">
-                    <div className="p-4">
-                      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-2">
-                        <h3 className="text-sm font-semibold text-gray-900">
-                          Notifications
-                        </h3>
-                        {notifications.filter(n => !n.read).length > 0 && (
-                          <button
-                            onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
-                      </div>
-                      
-                      <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        {notifications.length > 0 ? (
-                          notifications.map((notification) => (
-                            <div
-                              key={notification.id}
-                              className={`p-3 mb-2 rounded-md ${
-                                notification.read ? "bg-white" : "bg-blue-50"
-                              } hover:bg-gray-50 transition-colors duration-150`}
-                            >
-                              <p className="text-sm font-medium text-gray-900 mb-1">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-500 flex items-center">
-                                <svg
-                                  className="h-3 w-3 mr-1"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                {notification.time}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <svg
-                              className="mx-auto h-10 w-10 text-gray-300"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                            <p className="mt-2 text-sm text-gray-500">
-                              No notifications
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {notifications.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-                          <Link 
-                            href="/patient/notifications" 
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            View all notifications
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Notification Bell - Real-time Component */}
+              {patientUser && <NotificationBell userId={patientUser._id} role="patient" />}
 
               {/* Profile dropdown */}
               <div className="relative ml-3" ref={profileRef}>

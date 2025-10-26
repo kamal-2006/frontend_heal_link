@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import useUser from "@/hooks/useUser";
 import useDoctor from "@/hooks/useDoctor";
 import { toTitleCase } from "@/utils/text";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function DoctorDashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Start with false to avoid hydration mismatch
@@ -14,7 +15,6 @@ export default function DoctorDashboardLayout({ children }) {
   const router = useRouter();
   const { user, loading: userLoading, setUser } = useUser();
   const { doctor, loading: doctorLoading } = useDoctor();
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Handle client-side mounting
@@ -113,62 +113,8 @@ export default function DoctorDashboardLayout({ children }) {
 
             {/* User Profile and Notification */}
             <div className="flex items-center space-x-4">
-              {/* Notification Bell */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                  className="p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                  aria-label="Notifications"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
-                </button>
-
-                {/* Notification Dropdown */}
-                {isNotificationOpen && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 transform transition-all duration-200">
-                    <div className="p-4">
-                      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-2">
-                        <h3 className="text-sm font-semibold text-gray-900">
-                          Notifications
-                        </h3>
-                      </div>
-                      <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <div className="text-center py-8">
-                          <svg
-                            className="mx-auto h-10 w-10 text-gray-300"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1}
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          <p className="mt-2 text-sm text-gray-500">
-                            No notifications
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Notification Bell - Real-time Component */}
+              {user && <NotificationBell userId={user._id} role="doctor" />}
 
               {/* User Profile Dropdown */}
               <div className="ml-3 relative">
@@ -406,12 +352,11 @@ export default function DoctorDashboardLayout({ children }) {
         </main>
       </div>
 
-      {/* Close modals when clicking outside */}
-      {(isNotificationOpen || isProfileOpen) && (
+      {/* Close profile dropdown when clicking outside */}
+      {isProfileOpen && (
         <div
           className="fixed inset-0 z-10"
           onClick={() => {
-            setIsNotificationOpen(false);
             setIsProfileOpen(false);
           }}
         ></div>

@@ -3,24 +3,58 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function AdminLayout({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
   const profileRef = useRef(null);
-  const notificationsRef = useRef(null);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Notifications state similar to doctor dashboard
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'New doctor added', time: '10 minutes ago', read: false },
-    { id: 2, message: 'System update scheduled', time: '2 hours ago', read: false },
-    { id: 3, message: 'Appointment rescheduled', time: 'Yesterday', read: true },
-  ]);
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
-  const markAllAsRead = () => setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  // Fetch admin user info for NotificationBell
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        
+        // If we have a stored user, use it immediately
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            setAdminUser(user);
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+          }
+        }
+        
+        // If no token, return
+        if (!token) {
+          return;
+        }
+        
+        // Try to fetch fresh user data
+        const response = await fetch('http://localhost:5000/api/v1/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setAdminUser(data.data);
+            localStorage.setItem('user', JSON.stringify(data.data));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+    fetchUserInfo();
+  }, [router]);
 
   const handleLogout = () => {
     try {
@@ -69,21 +103,17 @@ export default function AdminLayout({ children }) {
     },
   ];
 
-  // Close dropdowns on outside click and Escape
+  // Close dropdown on outside click and Escape
   useEffect(() => {
     function handleClickOutside(event) {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
-      }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
-        setIsNotificationsOpen(false);
       }
     }
     
     function handleEsc(event) {
       if (event.key === 'Escape') {
         setIsProfileOpen(false);
-        setIsNotificationsOpen(false);
       }
     }
     
@@ -98,7 +128,6 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     setIsProfileOpen(false);
-    setIsNotificationsOpen(false);
   }, [pathname]);
 
   return (
@@ -135,72 +164,18 @@ export default function AdminLayout({ children }) {
               </Link>
             </div>
             
-            {/* User Profile */}
-            <div className="flex items-center">
-              {/* Notifications (right side) */}
-              <div className="mr-3 relative" ref={notificationsRef}>
-                <button
-                  onClick={() => setIsNotificationsOpen((prev) => !prev)}
-                  className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-label="Notifications"
-                >
-                  <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {unreadNotifications > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">{unreadNotifications}</span>
-                  )}
-                </button>
-                {isNotificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
-                      {unreadNotifications > 0 && (
-                        <button onClick={markAllAsRead} className="text-xs font-medium text-blue-600 hover:text-blue-800">Mark all as read</button>
-                      )}
-                    </div>
-                    <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
-                      <li className="px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <span className="h-2 w-2 rounded-full bg-red-500 mt-2"></span>
-                          <div>
-                            <p className="text-sm text-gray-800">Doctor slot swap requested by Dr. Jane</p>
-                            <p className="text-xs text-gray-500">5 minutes ago</p>
-                          </div>
-                        </div>
-                      </li>
-                      <li className="px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <span className="h-2 w-2 rounded-full bg-blue-500 mt-2"></span>
-                          <div>
-                            <p className="text-sm text-gray-800">System update scheduled tonight</p>
-                            <p className="text-xs text-gray-500">1 hour ago</p>
-                          </div>
-                        </div>
-                      </li>
-                      <li className="px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <span className="h-2 w-2 rounded-full bg-amber-500 mt-2"></span>
-                          <div>
-                            <p className="text-sm text-gray-800">Appointment change: Patient John to 3:00 PM</p>
-                            <p className="text-xs text-gray-500">Yesterday</p>
-                          </div>
-                        </div>
-                      </li>
-                      <li className="px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <span className="h-2 w-2 rounded-full bg-gray-400 mt-2"></span>
-                          <div>
-                            <p className="text-sm text-gray-800">System maintenance window completed</p>
-                            <p className="text-xs text-gray-500">2 days ago</p>
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div className="ml-3 relative" ref={profileRef}>
+            {/* Right Side: Notification Bell + User Profile */}
+            <div className="flex items-center gap-3">
+              {/* Real-Time Notification Bell */}
+              {adminUser && (
+                <NotificationBell 
+                  userId={adminUser._id} 
+                  role="admin" 
+                />
+              )}
+
+              {/* User Profile Dropdown */}
+              <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((prev) => !prev)}
                   className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-gray-100"
@@ -215,8 +190,8 @@ export default function AdminLayout({ children }) {
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-800">Admin</p>
-                      <p className="text-xs text-gray-500">admin@heallink.local</p>
+                      <p className="text-sm font-semibold text-gray-800">{adminUser?.firstName || 'Admin'}</p>
+                      <p className="text-xs text-gray-500">{adminUser?.email || 'admin@heallink.local'}</p>
                     </div>
                     <ul className="py-1">
                       <li>
