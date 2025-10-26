@@ -39,12 +39,33 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Environment Variables
 
-Create a `.env.local` file in the root with:
+Create a `.env.local` file:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+# Include the /api/v1 suffix
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id-here
 ```
+
+## Deploy on Vercel (Frontend)
+
+- Connect repo to Vercel
+- Settings → Git → Production Branch = `prod`
+- Settings → Environment Variables:
+  - `NEXT_PUBLIC_API_BASE_URL` = `https://<your-backend>.vercel.app/api/v1`
+  - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` = `<your-google-client-id>`
+- Deploy
+
+## Deploy on Vercel (Backend)
+
+- Connect backend repo to Vercel
+- Settings → Git → Production Branch = `prod`
+- Settings → Environment Variables:
+  - `NODE_ENV` = `production`
+  - `MONGO_URI` = `<your-mongodb-uri>`
+  - `JWT_SECRET` = `<your-secret>`
+  - `FRONTEND_ORIGIN` = `https://<your-frontend>.vercel.app`
+- Deploy
 
 ## API Utility
 

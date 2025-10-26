@@ -1,4 +1,5 @@
-const API_BASE_URL =process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 // Helper function to get auth headers
 const getAuthHeaders = (isFormData = false) => {
@@ -39,20 +40,23 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
     }
 
     if (!response.ok) {
-      console.log('API Response Details:', {
+      console.log("API Response Details:", {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
         data: data,
         dataType: typeof data,
         errorField: data?.error,
-        messageField: data?.message
+        messageField: data?.message,
       });
-      
+
       // Handle authorization errors specially
       if (response.status === 401 || response.status === 403) {
         const authErrorMessage = data?.error || "Authentication failed";
-        const safeAuthErrorMessage = typeof authErrorMessage === 'string' ? authErrorMessage : 'Authentication failed';
+        const safeAuthErrorMessage =
+          typeof authErrorMessage === "string"
+            ? authErrorMessage
+            : "Authentication failed";
         console.error("Authorization error:", safeAuthErrorMessage);
         // Clear invalid token
         localStorage.removeItem("token");
@@ -67,25 +71,30 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         ) {
           window.location.href = "/login";
         }
-        
+
         throw new Error(safeAuthErrorMessage);
       }
-      
+
       // For server errors (5xx), return a structured error response instead of throwing
       if (response.status >= 500) {
-        const errorMessage = data?.error || data?.message || `Server error (${response.status})`;
+        const errorMessage =
+          data?.error || data?.message || `Server error (${response.status})`;
         console.error("Server error for", response.url, ":", errorMessage);
         console.error("Full response data:", data);
         return {
           success: false,
           error: errorMessage,
-          data: null
+          data: null,
         };
       }
-      
+
       // For other client errors (4xx), throw as before
-      const errorMessage = data?.error || data?.message || `API request failed with status ${response.status}`;
-      const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : 'Unknown API error';
+      const errorMessage =
+        data?.error ||
+        data?.message ||
+        `API request failed with status ${response.status}`;
+      const safeErrorMessage =
+        typeof errorMessage === "string" ? errorMessage : "Unknown API error";
       throw new Error(safeErrorMessage);
     }
 
@@ -98,14 +107,14 @@ const apiRequest = async (endpoint, options = {}, isFormData = false) => {
         "Network error: Unable to reach the server. Please check your connection or server status."
       );
     }
-    
+
     // Log more details about the error for debugging
     console.error("API Error Details:", {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      stack: error.stack,
     });
-    
+
     throw error;
   }
 };
@@ -221,7 +230,8 @@ export const doctorApi = {
     if (filters.date) qs.set("date", filters.date);
     if (filters.startTime) qs.set("startTime", filters.startTime);
     if (filters.endTime) qs.set("endTime", filters.endTime);
-    if (filters.specialization) qs.set("specialization", filters.specialization);
+    if (filters.specialization)
+      qs.set("specialization", filters.specialization);
 
     // Do NOT pass filters in the path; use query string
     return apiRequest(`/doctors/available?${qs.toString()}`, { method: "GET" });
@@ -366,7 +376,8 @@ export const medicationApi = {
 // Feedback API functions
 export const feedbackApi = {
   // Get appointments that need feedback (completed appointments without feedback)
-  getAppointmentsNeedingFeedback: () => apiRequest("/feedback/patient/appointments"),
+  getAppointmentsNeedingFeedback: () =>
+    apiRequest("/feedback/patient/appointments"),
 
   // Get all feedback for the current patient
   getMyFeedback: () => apiRequest("/feedback/me"),
@@ -415,17 +426,14 @@ export const notificationApi = {
 export const reportsApi = {
   // Upload medical report with files
   uploadReport: (formData) => {
-    // For file uploads, we need to use fetch directly with FormData
     const token = localStorage.getItem("token");
     return fetch(
       `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"
       }/records/patient/upload`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       }
     ).then((response) => response.json());
@@ -467,12 +475,10 @@ export const reportsApi = {
     const token = localStorage.getItem("token");
     return fetch(
       `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"
       }/records/${id}/download`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
   },
