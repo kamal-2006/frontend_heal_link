@@ -216,10 +216,16 @@ export const authApi = {
 // Doctor API functions
 export const doctorApi = {
   // Get current doctor profile
-  getMyProfile: () => apiRequest("/doctors/me"),
+  getMyProfile: () => apiRequest("/doctor/me"),
 
   // Update current doctor profile
-  updateMyProfile: (profileData) => put("/doctors/me", profileData, true),
+  updateMyProfile: (profileData) => put("/doctor/me", profileData, true),
+
+  // Get doctor's patients
+  getMyPatients: () => apiRequest("/doctor/patients"),
+
+  // Get dashboard data
+  getDashboardData: () => apiRequest("/doctor/dashboard-data"),
 
   // Get all doctors
   getDoctors: () => apiRequest("/doctors"),

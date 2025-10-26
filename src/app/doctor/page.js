@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import useUser from '@/hooks/useUser';
 import { toTitleCase } from '@/utils/text';
-import { get } from '@/utils/api';
+import { get, doctorApi } from '@/utils/api';
 import Link from 'next/link';
 
 import useDoctorDashboard from '@/hooks/useDoctorDashboard';
@@ -18,12 +18,23 @@ export default function DoctorDashboard() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState('');
+
+  // Set current date only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }));
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data } = await get('/doctor/dashboard-data');
+        const { data } = await doctorApi.getDashboardData();
 
         setStats({
           appointmentsToday: data.appointmentsToday,
@@ -36,12 +47,12 @@ export default function DoctorDashboard() {
                 ? `${a.patient.firstName} ${a.patient.lastName}`
                 : 'N/A',
             patientId: a.patient?.patientInfo?.patientId || 'N/A', // Added patientId
-            date: new Date(a.date).toISOString().split('T')[0], // YYYY-MM-DD
-            time: new Date(a.date).toLocaleTimeString([], {
+            date: a.date ? new Date(a.date).toISOString().split('T')[0] : 'N/A', // YYYY-MM-DD
+            time: a.date ? new Date(a.date).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
-            }),
-            type: a.reason, // Use appointment reason
+            }) : 'N/A',
+            type: a.reason || 'N/A', // Use appointment reason
             status: a.status,
           })),
         });
@@ -70,12 +81,7 @@ export default function DoctorDashboard() {
           </p>
         </div>
         <p className="text-sm text-gray-500">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
+          {currentDate}
         </p>
       </div>
 
@@ -252,7 +258,7 @@ export default function DoctorDashboard() {
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
               <Link
-                href="/doctor/dashboard/appointments"
+                href="/doctor/appointments"
                 className="text-sm font-medium text-blue-600 hover:text-blue-800"
               >
                 View all appointments

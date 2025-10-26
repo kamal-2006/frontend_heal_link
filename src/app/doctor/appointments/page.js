@@ -25,13 +25,13 @@ export default function DoctorAppointments() {
               ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
               : 'Unknown Patient',
             patientId: appointment.patient?.patientInfo?.patientId || "",
-            fullDate: new Date(appointment.date),
-            date: new Date(appointment.date).toISOString().split("T")[0],
-            time: new Date(appointment.date).toLocaleTimeString([], {
+            fullDate: appointment.date ? new Date(appointment.date) : null,
+            date: appointment.date ? new Date(appointment.date).toISOString().split("T")[0] : 'N/A',
+            time: appointment.date ? new Date(appointment.date).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
-            }),
-            type: appointment.reason,
+            }) : 'N/A',
+            type: appointment.reason || 'N/A',
             status: appointment.status,
             notes: appointment.notes,
             contact: appointment.patient?.phone || appointment.patient?.email || '',

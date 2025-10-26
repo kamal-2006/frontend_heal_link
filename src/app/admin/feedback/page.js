@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getDoctorName } from '../../../utils/doctorUtils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
@@ -23,26 +24,18 @@ export default function FeedbackManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  // Fetch feedback data from backend
+  // Fetch feedback data from backend (public access for admin)
   const fetchFeedbackData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication required');
-        setLoading(false);
-        return;
-      }
-
-      console.log('Fetching feedback data from:', `${API_BASE_URL}/feedback`);
+      console.log('Fetching feedback data from:', `${API_BASE_URL}/feedback/public/admin`);
       
-      const response = await fetch(`${API_BASE_URL}/feedback`, {
+      const response = await fetch(`${API_BASE_URL}/feedback/public/admin`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
       });
 
@@ -164,7 +157,7 @@ export default function FeedbackManagement() {
     const matchesTab = activeTab === 'all' || feedback.feedbackType === activeTab;
     const matchesSearch = !searchTerm || 
       getFullName(feedback.patient).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getFullName(feedback.doctor).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getDoctorName(feedback.doctor).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (feedback.comment && feedback.comment.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesTab && matchesSearch;
@@ -215,7 +208,7 @@ export default function FeedbackManagement() {
       f._id,
       f.feedbackType,
       getFullName(f.patient),
-      getFullName(f.doctor),
+      getDoctorName(f.doctor),
       f.rating || '',
       formatDate(f.createdAt),
       f.status,
@@ -560,10 +553,10 @@ export default function FeedbackManagement() {
                       {/* Doctor */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          Dr. {getFullName(feedback.doctor)}
+                          Dr. {getDoctorName(feedback.doctor)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {feedback.doctor?.specialty || 'General Practice'}
+                          {feedback.doctor?.specialization || feedback.doctor?.specialty || 'General Practice'}
                         </div>
                       </td>
 
@@ -716,10 +709,10 @@ export default function FeedbackManagement() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-lg font-medium text-gray-900">
-                          Dr. {getFullName(selectedFeedback.doctor)}
+                          Dr. {getDoctorName(selectedFeedback.doctor)}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {selectedFeedback.doctor?.specialty || 'General Practice'}
+                          {selectedFeedback.doctor?.specialization || 'General Practice'}
                         </div>
                       </div>
                     </div>

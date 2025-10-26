@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Pie } from "react-chartjs-2";
+import { getDoctorName, getDoctorInitials } from "../../../utils/doctorUtils";
 import { feedbackApi } from "../../../utils/api";
 
 // Register Chart.js components
@@ -22,6 +23,8 @@ export default function FeedbackPage() {
     comment: "",
     feedbackType: "compliment"
   });
+
+
 
   useEffect(() => {
     fetchCompletedAppointments();
@@ -62,7 +65,18 @@ export default function FeedbackPage() {
       const response = await feedbackApi.getAppointmentsNeedingFeedback();
       console.log("Appointments needing feedback response:", response);
       
+      // Log the raw response to understand data structure
+      if (response?.data) {
+        console.log("Raw appointments data:", JSON.stringify(response.data, null, 2));
+      }
+      
       const appointmentsData = response.data || [];
+      
+      // Additional validation to ensure we have proper data structure
+      if (appointmentsData.length > 0) {
+        console.log("Sample appointment doctor structure:", appointmentsData[0].doctor);
+        console.log("Sample appointment structure keys:", Object.keys(appointmentsData[0]));
+      }
       console.log(`Found ${appointmentsData.length} appointments needing feedback`);
       
       // Debug: Log the structure of the first appointment
@@ -70,9 +84,29 @@ export default function FeedbackPage() {
         console.log("First appointment structure:", appointmentsData[0]);
         console.log("First appointment date field:", appointmentsData[0].date);
         console.log("Available appointment fields:", Object.keys(appointmentsData[0]));
+        console.log("Doctor data structure:", appointmentsData[0].doctor);
+        console.log("Doctor firstName:", appointmentsData[0].doctor?.firstName);
+        console.log("Doctor lastName:", appointmentsData[0].doctor?.lastName);
+        console.log("Doctor specialization:", appointmentsData[0].doctor?.specialization);
+        console.log("Doctor _id:", appointmentsData[0].doctor?._id);
+        console.log("Is doctor object truthy?", !!appointmentsData[0].doctor);
+        console.log("Doctor keys:", appointmentsData[0].doctor ? Object.keys(appointmentsData[0].doctor) : 'No doctor');
       }
       
-      setAppointments(appointmentsData);
+      // Clean and validate the appointments data
+      const cleanedAppointments = appointmentsData.map((appointment, index) => {
+        console.log(`Appointment ${index}:`, {
+          id: appointment._id,
+          date: appointment.date,
+          status: appointment.status,
+          doctor: appointment.doctor,
+          doctorName: getDoctorName(appointment.doctor),
+          doctorInitials: getDoctorInitials(appointment.doctor)
+        });
+        return appointment;
+      });
+      
+      setAppointments(cleanedAppointments);
     } catch (error) {
       console.error("Error fetching appointments:", error);
       
@@ -107,7 +141,43 @@ export default function FeedbackPage() {
       
       // Handle the response more carefully
       if (response && response.success) {
-        setFeedbackHistory(response.data || []);
+        console.log("Feedback history data:", response.data);
+      
+      // Log the raw response to understand data structure
+      if (response?.data) {
+        console.log("Raw feedback history data:", JSON.stringify(response.data, null, 2));
+      }
+        // Log each feedback to see the doctor structure
+        response.data?.forEach((feedback, index) => {
+          console.log(`Feedback ${index}:`, {
+            id: feedback._id,
+            rating: feedback.rating,
+            doctor: feedback.doctor,
+            doctorStructure: feedback.doctor ? {
+              _id: feedback.doctor._id,
+              firstName: feedback.doctor.firstName,
+              lastName: feedback.doctor.lastName,
+              specialization: feedback.doctor.specialization,
+              allKeys: Object.keys(feedback.doctor),
+              isTruthy: !!feedback.doctor,
+              hasFirstName: !!feedback.doctor.firstName,
+              hasLastName: !!feedback.doctor.lastName
+            } : 'No doctor data'
+          });
+        });
+        // Clean and validate the feedback data
+        const cleanedFeedback = (response.data || []).map((feedback, index) => {
+          console.log(`Feedback ${index}:`, {
+            id: feedback._id,
+            rating: feedback.rating,
+            doctor: feedback.doctor,
+            doctorName: getDoctorName(feedback.doctor),
+            doctorInitials: getDoctorInitials(feedback.doctor)
+          });
+          return feedback;
+        });
+        
+        setFeedbackHistory(cleanedFeedback);
       } else if (response && response.success === false) {
         // API returned an error response (like server error)
         console.warn("API error:", response.error || "Unknown error");
@@ -568,18 +638,12 @@ export default function FeedbackPage() {
                           <div className="flex items-center">
                             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                               <span className="text-blue-600 font-medium text-sm">
-                                {appointment.doctor ? 
-                                  `${appointment.doctor.firstName?.[0] || ''}${appointment.doctor.lastName?.[0] || ''}` : 
-                                  'Dr'
-                                }
+                                {getDoctorInitials(appointment.doctor)}
                               </span>
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                Dr. {appointment.doctor ? 
-                                  `${appointment.doctor.firstName} ${appointment.doctor.lastName}` : 
-                                  'Unknown Doctor'
-                                }
+                                Dr. {getDoctorName(appointment.doctor)}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {appointment.doctor?.specialization || 'General Medicine'}
@@ -631,21 +695,15 @@ export default function FeedbackPage() {
                           <div className="flex items-center">
                             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                               <span className="text-blue-600 font-medium text-sm">
-                                {feedback.doctor ? 
-                                  `${feedback.doctor.firstName?.[0] || ''}${feedback.doctor.lastName?.[0] || ''}` : 
-                                  'Dr'
-                                }
+                                {getDoctorInitials(feedback.doctor)}
                               </span>
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                Dr. {feedback.doctor ? 
-                                  `${feedback.doctor.firstName} ${feedback.doctor.lastName}` : 
-                                  'Unknown Doctor'
-                                }
+                                Dr. {getDoctorName(feedback.doctor)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {feedback.doctor?.specialty || 'General Medicine'}
+                                {feedback.doctor?.specialization || 'General Medicine'}
                               </div>
                             </div>
                           </div>
@@ -710,10 +768,7 @@ export default function FeedbackPage() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Share Your Feedback</h3>
                   <p className="text-sm text-gray-600">
-                    Dr. {selectedAppointment.doctor ? 
-                      `${selectedAppointment.doctor.firstName} ${selectedAppointment.doctor.lastName}` : 
-                      'Unknown Doctor'
-                    }
+                    Dr. {getDoctorName(selectedAppointment?.doctor)}
                   </p>
                 </div>
                 <button

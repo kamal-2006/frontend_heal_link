@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toTitleCase } from '../../../utils/text';
+import { getDoctorName } from '../../../utils/doctorUtils';
 import usePatient from '../../../hooks/usePatient';
 import { patientApi, appointmentApi } from '../../../utils/api';
 
@@ -423,7 +424,7 @@ export default function PatientDashboard() {
                     </div>
                     <div className="ml-4">
                       <h4 className="text-sm font-medium text-gray-900">
-                        Dr. {appointment.doctor?.firstName || 'Unknown'} {appointment.doctor?.lastName || ''}
+                        Dr. {getDoctorName(appointment.doctor)}
                       </h4>
                       <p className="text-sm text-gray-500">{appointment.reason || 'General Checkup'}</p>
                     </div>

@@ -8,6 +8,14 @@ const useUser = () => {
 
   const fetchUser = async () => {
     setLoading(true);
+    
+    // Avoid hydration mismatch by checking if we're on the client
+    if (typeof window === 'undefined') {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
 
@@ -19,13 +27,19 @@ const useUser = () => {
 
     try {
       const response = await doctorApi.getMyProfile();
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
       setUser(response.data.user);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }

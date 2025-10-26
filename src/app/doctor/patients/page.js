@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { get, put } from "@/utils/api";
+import { get, put, doctorApi } from "@/utils/api";
 
 export default function DoctorPatients() {
   const [patients, setPatients] = useState([]);
@@ -11,19 +11,23 @@ export default function DoctorPatients() {
     useState(false);
   const [patientToView, setPatientToView] = useState(null);
   const [doctors, setDoctors] = useState([]);
+  const [currentDate, setCurrentDate] = useState('');
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // Set current date only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }));
+  }, []);
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const { data } = await get("/doctors/patients");
-        setPatients(data || []);
+        const response = await doctorApi.getMyPatients();
+        setPatients(response.data || []);
       } catch (error) {
         console.error("Error fetching patients:", error);
       } finally {
@@ -45,12 +49,12 @@ export default function DoctorPatients() {
   }, []);
 
   const filteredPatients = patients.filter((patient) => {
-    const fullName =
-      `${patient.user.firstName} ${patient.user.lastName}`.toLowerCase();
+    const fullName = patient.name?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
     return (
       fullName.includes(query) ||
-      patient.patientId.toLowerCase().includes(query)
+      patient.patientId?.toLowerCase().includes(query) ||
+      patient.email?.toLowerCase().includes(query)
     );
   });
 
@@ -133,11 +137,11 @@ export default function DoctorPatients() {
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                   Contact
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
-                  Gender
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                  Appointment Info
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                  Last Appointment
+                  Last Appointment Date
                 </th>
                 <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
                   Actions
@@ -185,15 +189,13 @@ export default function DoctorPatients() {
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
                             <span className="text-sm font-medium text-indigo-600">
-                              {patient.user?.firstName?.charAt(0) || "P"}
+                              {patient.name?.charAt(0) || "P"}
                             </span>
                           </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {patient.user
-                              ? `${patient.user.firstName} ${patient.user.lastName}`
-                              : "N/A"}
+                            {patient.name || "N/A"}
                           </div>
                           <div className="text-sm text-gray-500">
                             ID: {patient.patientId || patient._id?.slice(-6)}
@@ -203,17 +205,22 @@ export default function DoctorPatients() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-left">
                       <div className="text-sm text-gray-900">
-                        {patient.user?.email || "N/A"}
+                        {patient.email || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {patient.user?.phone || "N/A"}
+                        {patient.phone || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-900">
-                      {patient.gender || "N/A"}
+                      <div className="text-sm text-gray-900">
+                        {patient.lastAppointment?.reason || "N/A"}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Total: {patient.totalAppointments || 0} appointments
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-900">
-                      {formatDate(patient.lastAppointment)}
+                      {formatDate(patient.lastAppointment?.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <button

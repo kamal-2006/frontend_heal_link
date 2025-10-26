@@ -19,8 +19,22 @@ export default function SettingsPage() {
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   
-  const [profileData, setProfileData] = useState({});
+  const [profileData, setProfileData] = useState({
+    specialization: '',
+    experience: '',
+    qualification: '',
+    about: '',
+    consultationFee: '',
+    hospitalName: '',
+    hospitalAddress: '',
+    hospitalPhone: '',
+    availabilityDays: [],
+    timeSlots: [],
+    availabilityStatus: 'Active',
+  });
+  const [originalData, setOriginalData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -32,12 +46,21 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (doctor) {
-      setProfileData({
+      const data = {
+        specialization: doctor.specialization || '',
+        experience: doctor.experience || '',
+        qualification: doctor.qualification || '',
+        about: doctor.about || '',
         consultationFee: doctor.consultationFee || '',
+        hospitalName: doctor.hospital?.name || '',
+        hospitalAddress: doctor.hospital?.address || '',
+        hospitalPhone: doctor.hospital?.phone || '',
         availabilityDays: doctor.availability?.days || [],
         timeSlots: doctor.availability?.timeSlots || [],
         availabilityStatus: doctor.isActive ? 'Active' : 'Inactive',
-      });
+      };
+      setProfileData(data);
+      setOriginalData(data);
     }
   }, [doctor]);
 
@@ -49,20 +72,24 @@ export default function SettingsPage() {
   };
 
   const handleTimeSlotChange = (index, field, value) => {
-    const newTimeSlots = [...profileData.timeSlots];
-    newTimeSlots[index][field] = value;
-    setProfileData(prev => ({ ...prev, timeSlots: newTimeSlots }));
+    const currentTimeSlots = profileData.timeSlots || [];
+    const newTimeSlots = [...currentTimeSlots];
+    if (newTimeSlots[index]) {
+      newTimeSlots[index][field] = value;
+      setProfileData(prev => ({ ...prev, timeSlots: newTimeSlots }));
+    }
   };
 
   const addTimeSlot = () => {
     setProfileData(prev => ({
       ...prev,
-      timeSlots: [...prev.timeSlots, { startTime: '', endTime: '' }]
+      timeSlots: [...(prev.timeSlots || []), { startTime: '', endTime: '' }]
     }));
   };
 
   const removeTimeSlot = (index) => {
-    const newTimeSlots = [...profileData.timeSlots];
+    const currentTimeSlots = profileData.timeSlots || [];
+    const newTimeSlots = [...currentTimeSlots];
     newTimeSlots.splice(index, 1);
     setProfileData(prev => ({ ...prev, timeSlots: newTimeSlots }));
   };
@@ -106,12 +133,32 @@ export default function SettingsPage() {
     }
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    if (originalData) {
+      setProfileData({ ...originalData });
+    }
+    setIsEditing(false);
+  };
+
   const handleSaveSettings = async () => {
     try {
       setIsSaving(true);
       
       const updateData = {
-        consultationFee: profileData.consultationFee,
+        specialization: profileData.specialization,
+        experience: parseInt(profileData.experience) || 0,
+        qualification: profileData.qualification,
+        about: profileData.about,
+        consultationFee: parseFloat(profileData.consultationFee) || 0,
+        hospital: {
+          name: profileData.hospitalName,
+          address: profileData.hospitalAddress,
+          phone: profileData.hospitalPhone,
+        },
         availability: {
           days: profileData.availabilityDays,
           timeSlots: profileData.timeSlots,
@@ -122,6 +169,10 @@ export default function SettingsPage() {
       console.log('Sending update data:', updateData);
       const response = await doctorApi.updateMyProfile(updateData);
       console.log('Update response:', response);
+      
+      // Update original data to reflect saved changes
+      setOriginalData({ ...profileData });
+      setIsEditing(false);
       
       setSuccessMessage('Settings updated successfully!');
       setShowSuccessAlert(true);
@@ -227,84 +278,236 @@ export default function SettingsPage() {
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">Profile Settings</h3>
         </div>
-        <div className="p-6 space-y-4">
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee</label>
-            <input
-              type="number"
-              value={profileData.consultationFee}
-              onChange={(e) => handleInputChange('consultationFee', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Availability Status</label>
-            <select
-              value={profileData.availabilityStatus}
-              onChange={(e) => handleInputChange('availabilityStatus', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+        <div className="p-6 space-y-6">
+          {/* Professional Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Professional Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
+                <select
+                  value={profileData.specialization}
+                  onChange={(e) => handleInputChange('specialization', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Specialization</option>
+                  <option value="General Medicine">General Medicine</option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Oncology">Oncology</option>
+                  <option value="Psychiatry">Psychiatry</option>
+                  <option value="Radiology">Radiology</option>
+                  <option value="Emergency Medicine">Emergency Medicine</option>
+                  <option value="Internal Medicine">Internal Medicine</option>
+                  <option value="Surgery">Surgery</option>
+                  <option value="Gynecology">Gynecology</option>
+                  <option value="Ophthalmology">Ophthalmology</option>
+                  <option value="ENT">ENT</option>
+                  <option value="Anesthesiology">Anesthesiology</option>
+                  <option value="Pathology">Pathology</option>
+                  <option value="Gastroenterology">Gastroenterology</option>
+                  <option value="Pulmonology">Pulmonology</option>
+                  <option value="Endocrinology">Endocrinology</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={profileData.experience}
+                  onChange={(e) => handleInputChange('experience', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label>
+              <input
+                type="text"
+                value={profileData.qualification}
+                onChange={(e) => handleInputChange('qualification', e.target.value)}
+                placeholder="e.g., MBBS, MD, MS"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">About</label>
+              <textarea
+                value={profileData.about}
+                onChange={(e) => handleInputChange('about', e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Brief description about yourself and your practice"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <p className="text-sm text-gray-500 mt-1">{profileData.about?.length || 0}/500 characters</p>
+            </div>
           </div>
 
+          {/* Hospital Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Hospital Information</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Name</label>
+                <input
+                  type="text"
+                  value={profileData.hospitalName}
+                  onChange={(e) => handleInputChange('hospitalName', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Address</label>
+                <textarea
+                  value={profileData.hospitalAddress}
+                  onChange={(e) => handleInputChange('hospitalAddress', e.target.value)}
+                  rows={2}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hospital Phone</label>
+                <input
+                  type="tel"
+                  value={profileData.hospitalPhone}
+                  onChange={(e) => handleInputChange('hospitalPhone', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Information */}
+          <div className="border-b border-gray-200 pb-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Financial Information</h4>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={profileData.consultationFee}
+                onChange={(e) => handleInputChange('consultationFee', e.target.value)}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+          {/* Availability Settings */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Availability Days</label>
-            <div className="grid grid-cols-4 gap-2">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Availability Settings</h4>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Availability Status</label>
+              <select
+                value={profileData.availabilityStatus}
+                onChange={(e) => handleInputChange('availabilityStatus', e.target.value)}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Availability Days</label>
+              <div className="grid grid-cols-4 gap-2">
               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                 <label key={day} className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    checked={profileData.availabilityDays.includes(day)}
+                    checked={profileData.availabilityDays?.includes(day) || false}
                     onChange={(e) => {
+                      const currentDays = profileData.availabilityDays || [];
                       const newDays = e.target.checked
-                        ? [...profileData.availabilityDays, day]
-                        : profileData.availabilityDays.filter(d => d !== day);
+                        ? [...currentDays, day]
+                        : currentDays.filter(d => d !== day);
                       handleInputChange('availabilityDays', newDays);
                     }}
-                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    disabled={!isEditing}
+                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <span>{day}</span>
                 </label>
               ))}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
-            {profileData.timeSlots.map((slot, index) => (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
+            {(profileData.timeSlots || []).map((slot, index) => (
               <div key={index} className="flex items-center space-x-2 mb-2">
                 <input
                   type="time"
                   value={slot.startTime}
                   onChange={(e) => handleTimeSlotChange(index, 'startTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
                 <input
                   type="time"
                   value={slot.endTime}
                   onChange={(e) => handleTimeSlotChange(index, 'endTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
-                <button onClick={() => removeTimeSlot(index)} className="text-red-500 hover:text-red-700">
+                <button 
+                  onClick={() => removeTimeSlot(index)} 
+                  disabled={!isEditing}
+                  className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Remove
                 </button>
               </div>
             ))}
-            <button onClick={addTimeSlot} className="text-blue-500 hover:text-blue-700">
-              + Add Time Slot
-            </button>
-          </div>
+              <button 
+                onClick={addTimeSlot} 
+                disabled={!isEditing}
+                className="text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                + Add Time Slot
+              </button>
+            </div>
 
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isSaving ? 'Saving...' : 'Save Settings'}
-            </button>
+            <div className="flex justify-end gap-4 pt-6">
+              {!isEditing ? (
+                <button
+                  onClick={handleEdit}
+                  className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                >
+                  Edit Settings
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Settings'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

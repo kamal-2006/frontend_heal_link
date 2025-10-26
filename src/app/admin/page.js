@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { getDoctorName } from "../../utils/doctorUtils";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -16,7 +17,6 @@ export default function AdminDashboard() {
     todayAppointments: 0,
     totalFeedback: 0,
   });
-<<<<<<< HEAD
   
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [recentPatients, setRecentPatients] = useState([]);
@@ -26,9 +26,6 @@ export default function AdminDashboard() {
     completedToday: 0
   });
   
-=======
-
->>>>>>> edeed1a6f96a46880170bf28bf85080ff4e64859
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -38,31 +35,15 @@ export default function AdminDashboard() {
       setLoading(true);
       setError(null);
 
-      // Get auth token
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No authentication token found");
-        setError("Authentication required");
-        setLoading(false);
-        return;
-      }
-
       // Test backend connection first
       console.log("Attempting to connect to backend at:", API_BASE_URL);
 
-      // Fetch real data from backend APIs with individual error handling
+      // Fetch real data from backend APIs using public endpoints (no auth required)
       const apiCalls = [
-<<<<<<< HEAD
         { url: `${API_BASE_URL}/doctors`, name: 'doctors' },
         { url: `${API_BASE_URL}/patients/admin/patients`, name: 'patients' },
-        { url: `${API_BASE_URL}/appointments/admin/dashboard`, name: 'appointments' },
-        { url: `${API_BASE_URL}/feedback`, name: 'feedback' }
-=======
-        { url: `${API_BASE_URL}/doctors`, name: "doctors" },
-        { url: `${API_BASE_URL}/patients/admin/patients`, name: "patients" },
-        { url: `${API_BASE_URL}/appointments`, name: "appointments" },
-        { url: `${API_BASE_URL}/feedback`, name: "feedback" },
->>>>>>> edeed1a6f96a46880170bf28bf85080ff4e64859
+        { url: `${API_BASE_URL}/appointments/public`, name: 'appointments' },
+        { url: `${API_BASE_URL}/feedback/public/admin`, name: 'feedback' }
       ];
 
       const results = await Promise.allSettled(
@@ -73,7 +54,6 @@ export default function AdminDashboard() {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
               },
             });
 
@@ -147,7 +127,6 @@ export default function AdminDashboard() {
       const today = new Date().toISOString().split('T')[0];
       
       if (appointmentsData?.data && Array.isArray(appointmentsData.data)) {
-<<<<<<< HEAD
         const todaysAppointments = appointmentsData.data.filter(apt => 
           apt.date && apt.date.startsWith(today)
         );
@@ -157,12 +136,6 @@ export default function AdminDashboard() {
         
         // Set recent appointments (last 5)
         setRecentAppointments(appointmentsData.data.slice(0, 5));
-=======
-        const today = new Date().toISOString().split("T")[0];
-        todayAppointments = appointmentsData.data.filter(
-          (apt) => apt.date && apt.date.startsWith(today)
-        ).length;
->>>>>>> edeed1a6f96a46880170bf28bf85080ff4e64859
       }
 
       // Set recent patients (last 5)
@@ -183,7 +156,6 @@ export default function AdminDashboard() {
         totalFeedback: feedbackData?.count || feedbackData?.data?.length || 0,
       };
 
-<<<<<<< HEAD
       const healthStats = {
         activeDoctors,
         pendingAppointments,
@@ -192,9 +164,6 @@ export default function AdminDashboard() {
 
       console.log('Final stats:', stats);
       console.log('Health stats:', healthStats);
-=======
-      console.log("Final stats:", stats);
->>>>>>> edeed1a6f96a46880170bf28bf85080ff4e64859
       setStats(stats);
       setSystemHealth(healthStats);
 
@@ -419,15 +388,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Stats Summary */}
-<<<<<<< HEAD
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Today's Overview</h2>
-=======
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Today's Overview
-          </h2>
->>>>>>> edeed1a6f96a46880170bf28bf85080ff4e64859
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-600">
@@ -595,14 +557,7 @@ export default function AdminDashboard() {
                         }
                       </div>
                       <div className="text-sm text-gray-600">
-                        {appointment.doctor?.user ? 
-                          `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
-                          : appointment.doctor?.displayName 
-                          ? appointment.doctor.displayName
-                          : appointment.doctor?.doctorId 
-                          ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
-                          : 'Unknown Doctor'
-                        }
+                        Dr. {getDoctorName(appointment.doctor)}
                       </div>
                       <div className="text-xs text-gray-500">
                         {appointment.date ? new Date(appointment.date).toLocaleDateString() : 'No date'}

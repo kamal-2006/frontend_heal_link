@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { doctorApi } from "@/utils/api";
+import { getDoctorInitials } from "@/utils/doctorUtils";
+import DoctorAvatar from "@/components/DoctorAvatar";
 import useDoctor from "../../../hooks/useDoctor";
 import useUser from "../../../hooks/useUser";
 
@@ -29,6 +31,7 @@ export default function DoctorProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -132,14 +135,13 @@ export default function DoctorProfilePage() {
         <div className="bg-gradient-to-r from-blue-500 via-purple-400 to-pink-300 rounded-xl p-8 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="relative">
-                <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-2xl font-bold mr-6 overflow-hidden ring-4 ring-white ring-opacity-50 shadow-lg">
-                  <img
-                    src={doctor?.user?.profilePicture ? `http://localhost:5000/${doctor.user.profilePicture}` : "/default-avatar.png"}
-                    alt="Profile Photo"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+              <div className="relative mr-6">
+                <DoctorAvatar 
+                  doctor={doctor} 
+                  size="xl" 
+                  showBorder={true}
+                  className="bg-white bg-opacity-20"
+                />
               </div>
               <div>
                 <h1 className="text-3xl font-bold mb-2">
@@ -351,12 +353,27 @@ export default function DoctorProfilePage() {
                         <label className="block text-sm font-medium text-gray-700">
                           Profile Photo
                         </label>
-                        <input
-                          type="file"
-                          name="profilePhoto"
-                          onChange={(e) => setSelectedPhoto(e.target.files[0])}
-                          className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="border-2 border-gray-200 rounded-full">
+                              <DoctorAvatar 
+                                doctor={doctor} 
+                                size="lg"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 text-center">Current</p>
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              type="file"
+                              name="profilePhoto"
+                              accept="image/*"
+                              onChange={(e) => setSelectedPhoto(e.target.files[0])}
+                              className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Choose a new photo to upload</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">

@@ -1,6 +1,7 @@
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -32,9 +33,13 @@ export default function RootLayout({ children }) {
         {clientId ? (
           <GoogleOAuthProvider clientId={clientId}>
             {children}
+            <Toaster position="top-right" />
           </GoogleOAuthProvider>
         ) : (
-          children
+          <>
+            {children}
+            <Toaster position="top-right" />
+          </>
         )}
       </body>
     </html>

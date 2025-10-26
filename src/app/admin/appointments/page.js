@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getDoctorName } from '../../../utils/doctorUtils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
@@ -14,24 +15,72 @@ export default function AppointmentManagement() {
   const [appointmentToReschedule, setAppointmentToReschedule] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  // Fetch appointments from database
+  // Fetch appointments from database (no authentication required for admin direct access)
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/appointments/admin/dashboard`);
+      
+      console.log('� Fetching all appointments directly...');
+      console.log('🌐 API URL:', `${API_BASE_URL}/appointments`);
+      
+      // Fetch appointments from public endpoint (no auth required)
+      const response = await fetch(`${API_BASE_URL}/appointments/public`);
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch appointments');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('❌ Direct fetch failed:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to fetch appointments`);
       }
       
       const result = await response.json();
+      console.log('✅ Successfully fetched appointments:', result.count || result.data?.length || 0);
       setAppointments(result.data || []);
       setError(null);
     } catch (err) {
-      console.error('Error fetching appointments:', err);
-      setError('Failed to load appointments. Please try again later.');
+      console.error('❌ Error fetching appointments:', err);
+      
+      if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+        setError('Cannot connect to server. Please ensure the backend is running on port 5000.');
+      } else if (err.message.includes('401') || err.message.includes('403')) {
+        setError('Authentication failed. Please login again.');
+      } else {
+        setError(`Failed to load appointments: ${err.message}`);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Test backend connectivity
+  const testBackend = async () => {
+    try {
+      console.log('🧪 Testing backend connectivity...');
+      const response = await fetch('http://localhost:5000/api/v1/appointments/admin', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('🧪 Test response status:', response.status);
+      console.log('🧪 Test response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🧪 Test successful! Data received:', data);
+        alert(`Backend test successful! Found ${data.count} appointments`);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.log('🧪 Test failed with error:', errorData);
+        alert(`Backend test failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('🧪 Test error:', error);
+      alert(`Backend test error: ${error.message}`);
     }
   };
 
@@ -296,13 +345,7 @@ export default function AppointmentManagement() {
         patientId: appointment.patient._id,
         type: 'appointment_rescheduled',
         title: 'Appointment Rescheduled',
-        message: `Your appointment with ${
-          appointment.doctor?.user ? 
-            `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
-            : appointment.doctor?.doctorId 
-            ? `Dr. ${appointment.doctor.doctorId}`
-            : 'your doctor'
-        } has been rescheduled to ${new Date(newDateTime).toLocaleDateString()} at ${new Date(newDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`,
+        message: `Your appointment with Dr. ${getDoctorName(appointment.doctor)} has been rescheduled to ${new Date(newDateTime).toLocaleDateString()} at ${new Date(newDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.`,
         appointmentId: appointmentId,
         newDateTime: newDateTime
       };
@@ -444,17 +487,15 @@ export default function AppointmentManagement() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="text-sm text-gray-900 truncate">
-                          {(
-                            appointment.doctor?.user && appointment.doctor.user.firstName
-                          ) ? (
-                            `Dr. ${appointment.doctor.user.firstName} ${appointment.doctor.user.lastName}`.trim()
+                          {appointment.doctor ? (
+                            `Dr. ${getDoctorName(appointment.doctor)}`
                           ) : (
-                            appointment.doctor?.displayName ? appointment.doctor.displayName : (
-                              appointment.doctor?.doctorId ? `Dr. ${appointment.doctor.doctorId}` : 'No doctor assigned'
-                            )
+                            <span className="text-red-600 font-medium">No doctor assigned</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{appointment.doctor?.specialization || 'Unassigned'}</div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {appointment.doctor?.specialization || <span className="text-red-500">Unassigned</span>}
+                        </div>
                       </td>
                       <td className="px-2 py-3">
                         <div className="text-sm text-gray-900 truncate">
@@ -702,24 +743,75 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
               <p className="text-sm text-gray-900">{appointment.patient?.email || 'N/A'}</p>
             </div>
             
+            {appointment.patient && (
+              <>
+                {appointment.patient.phone && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Patient Phone</label>
+                    <p className="text-sm text-gray-900">{appointment.patient.phone}</p>
+                  </div>
+                )}
+                {appointment.patient.patientId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Patient ID</label>
+                    <p className="text-sm text-gray-900">{appointment.patient.patientId}</p>
+                  </div>
+                )}
+                {appointment.patient.gender && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Gender</label>
+                    <p className="text-sm text-gray-900 capitalize">{appointment.patient.gender}</p>
+                  </div>
+                )}
+                {appointment.patient.bloodGroup && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Blood Group</label>
+                    <p className="text-sm text-gray-900">{appointment.patient.bloodGroup}</p>
+                  </div>
+                )}
+              </>
+            )}
+            
             {/* Doctor Information */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Doctor Name</label>
               <p className="text-sm text-gray-900">
-                {appointment.doctor?.user ? 
-                  `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
-                  : appointment.doctor?.doctorId 
-                  ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
-                  : <span className="text-red-600">No doctor assigned</span>
+                {appointment.doctor ? 
+                  `Dr. ${getDoctorName(appointment.doctor)}`
+                  : <span className="text-red-600 font-medium">No doctor assigned</span>
                 }
               </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Specialization</label>
               <p className="text-sm text-gray-900">
-                {appointment.doctor?.specialty || appointment.doctor?.specialization || 'General Medicine'}
+                {appointment.doctor?.specialty || appointment.doctor?.specialization || 
+                 (appointment.doctor ? 'General Medicine' : <span className="text-red-500">N/A</span>)}
               </p>
             </div>
+            
+            {appointment.doctor && (
+              <>
+                {appointment.doctor.experience && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Doctor Experience</label>
+                    <p className="text-sm text-gray-900">{appointment.doctor.experience} years</p>
+                  </div>
+                )}
+                {appointment.doctor.consultationFee && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Consultation Fee</label>
+                    <p className="text-sm text-gray-900">₹{appointment.doctor.consultationFee}</p>
+                  </div>
+                )}
+                {appointment.doctor.rating && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Doctor Rating</label>
+                    <p className="text-sm text-gray-900">{appointment.doctor.rating}/5 ⭐</p>
+                  </div>
+                )}
+              </>
+            )}
             
             {/* Appointment Details */}
             <div>
@@ -788,10 +880,8 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Current Doctor</label>
                   <p className="text-sm text-gray-900 mt-1 p-2 bg-gray-50 rounded-md">
-                    {appointment.doctor?.user ? 
-                      `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
-                      : appointment.doctor?.doctorId 
-                      ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+                    {appointment.doctor ? 
+                      `Dr. ${getDoctorName(appointment.doctor)}`
                       : <span className="text-red-600">No doctor assigned</span>
                     }
                   </p>
@@ -812,14 +902,14 @@ function AppointmentDetailsModal({ appointment, onClose, onReschedule }) {
                       )}
                       {doctors.filter(doc => doc._id !== getCurrentDoctorId()).map((doctor) => (
                         <option key={doctor._id} value={doctor._id}>
-                          Dr. {doctor.user?.firstName || 'Unknown'} {doctor.user?.lastName || ''} - {doctor.specialization || 'General Medicine'}
+                          Dr. {getDoctorName(doctor)} - {doctor.specialization || 'General Medicine'}
                         </option>
                       ))}
                     </select>
                   )}
                   {selectedDoctor && selectedDoctor !== getCurrentDoctorId() && (
                     <p className="text-sm text-green-600 mt-2">
-                      ✓ Will change to: {doctors.find(d => d._id === selectedDoctor)?.user?.firstName || 'Unknown'} {doctors.find(d => d._id === selectedDoctor)?.user?.lastName || ''}
+                      ✓ Will change to: Dr. {getDoctorName(doctors.find(d => d._id === selectedDoctor))}
                     </p>
                   )}
                 </div>
@@ -987,10 +1077,8 @@ function RescheduleModal({ appointment, onClose, onConfirm }) {
               Time: {appointment.time}
             </p>
             <p className="text-sm text-gray-600">
-              Doctor: {appointment.doctor?.user ? 
-                `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim()
-                : appointment.doctor?.doctorId 
-                ? `Dr. ${appointment.doctor.doctorId} (${appointment.doctor.specialization || 'Doctor'})`
+              Doctor: {appointment.doctor ? 
+                `Dr. ${getDoctorName(appointment.doctor)}`
                 : <span className="text-red-600">No doctor assigned</span>
               }
             </p>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { toTitleCase } from '../../../utils/text';
+import { getDoctorName, toTitleCase } from '../../../utils/doctorUtils';
 import { appointmentApi } from '../../../utils/api';
 
 export default function PatientAppointments() {
@@ -300,7 +300,7 @@ export default function PatientAppointments() {
                     </div>
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">
-                        Dr. {toTitleCase(appointment.doctor?.firstName || 'Unknown')} {toTitleCase(appointment.doctor?.lastName || '')}
+                        Dr. {getDoctorName(appointment.doctor)}
                       </h3>
                       <p className="text-sm text-gray-600">{appointment.type || 'General Medicine'}</p>
                       <p className="text-sm text-gray-500">{appointment.reason}</p>
@@ -391,7 +391,7 @@ export default function PatientAppointments() {
                 Reason for Cancellation
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                Please provide a reason for cancelling your appointment with Dr. {appointmentToCancel.doctor?.firstName} {appointmentToCancel.doctor?.lastName} on {new Date(appointmentToCancel.date).toLocaleDateString()}.
+                Please provide a reason for cancelling your appointment with Dr. {getDoctorName(appointmentToCancel.doctor)} on {new Date(appointmentToCancel.date).toLocaleDateString()}.
               </p>
               <textarea
                 value={cancellationReason}
@@ -439,7 +439,7 @@ export default function PatientAppointments() {
                 <p className="text-sm text-gray-500">
                   Are you sure you want to cancel your appointment with{' '}
                   <span className="font-medium">
-                    Dr. {appointmentToCancel?.doctor?.firstName} {appointmentToCancel?.doctor?.lastName}
+                    Dr. {getDoctorName(appointmentToCancel?.doctor)}
                   </span>{' '}
                   on{' '}
                   <span className="font-medium">
