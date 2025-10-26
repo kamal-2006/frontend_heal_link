@@ -444,14 +444,15 @@ export default function AppointmentManagement() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="text-sm text-gray-900 truncate">
-                          {appointment.doctor?.displayName || 
-                           (appointment.doctor?.user ? 
-                            `Dr. ${appointment.doctor.user.firstName || ''} ${appointment.doctor.user.lastName || ''}`.trim() :
-                            appointment.doctor?.doctorId ? 
-                            `Dr. ${appointment.doctor.doctorId}` :
-                            'No doctor assigned'
-                           )
-                          }
+                          {(
+                            appointment.doctor?.user && appointment.doctor.user.firstName
+                          ) ? (
+                            `Dr. ${appointment.doctor.user.firstName} ${appointment.doctor.user.lastName}`.trim()
+                          ) : (
+                            appointment.doctor?.displayName ? appointment.doctor.displayName : (
+                              appointment.doctor?.doctorId ? `Dr. ${appointment.doctor.doctorId}` : 'No doctor assigned'
+                            )
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{appointment.doctor?.specialization || 'Unassigned'}</div>
                       </td>

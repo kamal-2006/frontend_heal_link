@@ -3,16 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Pie } from "react-chartjs-2";
+import { feedbackApi } from "../../../utils/api";
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export default function FeedbackPage() {
   const [appointments, setAppointments] = useState([]);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [activeFilter, setActiveFilter] = useState("available");
@@ -28,27 +28,63 @@ export default function FeedbackPage() {
     fetchFeedbackHistory();
   }, []);
 
+  // Set up real-time updates - check for new completed appointments every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeFilter === "available") {
+        fetchCompletedAppointments();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [activeFilter]);
+
   // Fetch completed appointments
   const fetchCompletedAppointments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/feedback/patient/appointments`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data.data || []);
-      } else {
-        console.error("Failed to fetch appointments");
+      setError(null);
+      
+      // Check if user is authenticated before making API call
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      
+      if (!token || role !== "patient") {
+        console.error("Authentication required");
+        setError("Please log in as a patient to view feedback options.");
         setAppointments([]);
+        return;
       }
+      
+      console.log("Fetching completed appointments for feedback...");
+      
+      // Use the feedbackApi to get appointments that need feedback
+      const response = await feedbackApi.getAppointmentsNeedingFeedback();
+      console.log("Appointments needing feedback response:", response);
+      
+      const appointmentsData = response.data || [];
+      console.log(`Found ${appointmentsData.length} appointments needing feedback`);
+      
+      // Debug: Log the structure of the first appointment
+      if (appointmentsData.length > 0) {
+        console.log("First appointment structure:", appointmentsData[0]);
+        console.log("First appointment date field:", appointmentsData[0].date);
+        console.log("Available appointment fields:", Object.keys(appointmentsData[0]));
+      }
+      
+      setAppointments(appointmentsData);
     } catch (error) {
       console.error("Error fetching appointments:", error);
+      
+      // Set user-friendly error messages
+      if (error.message.includes("Network error") || error.message.includes("Failed to fetch")) {
+        setError("Unable to connect to the server. Please check your internet connection and try again.");
+      } else if (error.message.includes("401") || error.message.includes("403")) {
+        setError("Authentication expired. Please log in again.");
+      } else {
+        setError(`Failed to load appointments: ${error.message}`);
+      }
+      
       setAppointments([]);
     } finally {
       setLoading(false);
@@ -58,23 +94,30 @@ export default function FeedbackPage() {
   // Fetch submitted feedback history
   const fetchFeedbackHistory = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/feedback/patient/history`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFeedbackHistory(data.data || []);
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      
+      if (!token || role !== "patient") {
+        console.error("Authentication required for feedback history");
+        setFeedbackHistory([]);
+        return;
+      }
+      
+      const response = await feedbackApi.getMyFeedback();
+      
+      // Handle the response more carefully
+      if (response && response.success) {
+        setFeedbackHistory(response.data || []);
+      } else if (response && response.success === false) {
+        // API returned an error response (like server error)
+        console.warn("API error:", response.error || "Unknown error");
+        setFeedbackHistory([]);
       } else {
-        console.error("Failed to fetch feedback history");
+        console.warn("Unexpected response format:", response);
         setFeedbackHistory([]);
       }
     } catch (error) {
-      console.error("Error fetching feedback history:", error);
+      console.error("Error fetching feedback history:", error.message || error);
       setFeedbackHistory([]);
     }
   };
@@ -85,43 +128,57 @@ export default function FeedbackPage() {
     
     if (!selectedAppointment) return;
     
+    // Debug: log the appointment to see its structure
+    console.log("Selected appointment:", selectedAppointment);
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/feedback`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          appointment: selectedAppointment._id,
-          rating: feedbackForm.rating,
-          comment: feedbackForm.comment,
-          feedbackType: feedbackForm.feedbackType
-        }),
-      });
-
-      if (response.ok) {
-        // Show success popup
-        setShowSuccessPopup(true);
-        
-        // Auto-hide success popup after 3 seconds
-        setTimeout(() => {
-          setShowSuccessPopup(false);
-        }, 3000);
-
-        // Reset form and close modal
-        setFeedbackForm({ rating: 5, comment: "", feedbackType: "compliment" });
-        setShowFeedbackModal(false);
-        setSelectedAppointment(null);
-        
-        // Refresh data
-        fetchCompletedAppointments();
-        fetchFeedbackHistory();
-      } else {
-        console.error("Failed to submit feedback");
+      const feedbackData = {
+        appointment: selectedAppointment._id,
+        rating: feedbackForm.rating,
+        comment: feedbackForm.comment,
+        feedbackType: feedbackForm.feedbackType
+      };
+      
+      // Include doctor if available
+      if (selectedAppointment.doctor && selectedAppointment.doctor._id) {
+        feedbackData.doctor = selectedAppointment.doctor._id;
       }
+      
+      await feedbackApi.submitFeedback(feedbackData);
+      
+      // Show success popup
+      setShowSuccessPopup(true);
+      
+      // Auto-hide success popup after 3 seconds
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+      }, 3000);
+
+      // Reset form and close modal
+      setFeedbackForm({ rating: 5, comment: "", feedbackType: "compliment" });
+      setShowFeedbackModal(false);
+      setSelectedAppointment(null);
+      
+      // Refresh data immediately to show the updated list
+      await Promise.all([
+        fetchCompletedAppointments(),
+        fetchFeedbackHistory()
+      ]);
+      
+      // Switch to submitted tab to show the newly submitted feedback
+      setActiveFilter("submitted");
     } catch (error) {
       console.error("Error submitting feedback:", error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = "Failed to submit feedback. Please try again.";
+      if (error.message.includes("Network error")) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.message.includes("401") || error.message.includes("403")) {
+        errorMessage = "Authentication error. Please log in again.";
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -159,19 +216,37 @@ export default function FeedbackPage() {
 
   // Format date for appointments
   const formatDate = (dateString) => {
+    if (!dateString) {
+      console.log("formatDate: No date string provided");
+      return "No Date";
+    }
+    
+    console.log("formatDate: Input dateString:", dateString, "Type:", typeof dateString);
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.log("formatDate: Invalid date created from:", dateString);
+      return "Invalid Date";
+    }
+    
     const options = {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true
     };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return date.toLocaleString(undefined, options);
   };
 
   // Format date for feedback submission
   const formatFeedbackDate = (dateString) => {
+    if (!dateString) return "Invalid Date";
+    
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
     const options = {
       year: "numeric",
       month: "short", 
@@ -180,12 +255,12 @@ export default function FeedbackPage() {
       minute: "2-digit",
       hour12: true
     };
-    return date.toLocaleDateString(undefined, options);
+    return date.toLocaleString(undefined, options);
   };
 
   // Check if feedback already submitted for appointment
   const isFeedbackSubmitted = (appointmentId) => {
-    return feedbackHistory.some(feedback => feedback.appointment._id === appointmentId);
+    return feedbackHistory.some(feedback => feedback.appointment?._id === appointmentId);
   };
 
   // Filter appointments based on active filter
@@ -287,7 +362,49 @@ export default function FeedbackPage() {
             <h1 className="text-3xl font-bold text-gray-900">Feedback & Reviews</h1>
             <p className="text-gray-600 mt-2">Share your experience and help us improve our services</p>
           </div>
+          <div className="mt-4 md:mt-0">
+            <button
+              onClick={() => {
+                fetchCompletedAppointments();
+                fetchFeedbackHistory();
+              }}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error loading feedback data</h3>
+                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <button
+                  onClick={() => {
+                    setError(null);
+                    fetchCompletedAppointments();
+                    fetchFeedbackHistory();
+                  }}
+                  className="mt-2 text-sm text-red-800 underline hover:text-red-900"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Statistics Cards */}
         {feedbackHistory.length > 0 && (
@@ -465,17 +582,17 @@ export default function FeedbackPage() {
                                 }
                               </div>
                               <div className="text-sm text-gray-500">
-                                {appointment.doctor?.specialty || 'General Medicine'}
+                                {appointment.doctor?.specialization || 'General Medicine'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{formatDate(appointment.appointmentDate)}</div>
+                          <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {appointment.appointmentType}
+                            {appointment.reason || 'General Consultation'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -539,7 +656,7 @@ export default function FeedbackPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {feedback.appointment.appointmentType}
+                            {feedback.appointment?.reason || 'General Consultation'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

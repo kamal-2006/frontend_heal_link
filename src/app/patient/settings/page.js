@@ -445,8 +445,8 @@ export default function SettingsPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Setup Two-Factor Authentication</h3>
               <div className="space-y-4">
                 <div className="text-sm text-gray-600">
-                  <p className="mb-2">1. Install an authenticator app (Google Authenticator, Authy, etc.)</p>
-                  <p className="mb-4">2. Scan this QR code with your authenticator app:</p>
+                  <p className="mb-2">1. Install Microsoft Authenticator app on your mobile device</p>
+                  <p className="mb-4">2. Scan this QR code with your Microsoft Authenticator app:</p>
                 </div>
                 
                 {qrCodeUrl && (
