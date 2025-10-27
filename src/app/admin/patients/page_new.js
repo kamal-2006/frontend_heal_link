@@ -40,7 +40,7 @@ export default function AdminPatientsPage() {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5000/api/patients/admin', {
+      const response = await fetch('http://localhost:5001/api/patients/admin', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -150,7 +150,7 @@ export default function AdminPatientsPage() {
         emergencyContact: editForm.emergencyContact
       };
 
-      const response = await fetch(`http://localhost:5000/api/patients/admin/${selectedPatient._id}`, {
+      const response = await fetch(`http://localhost:5001/api/patients/admin/${selectedPatient._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -180,7 +180,7 @@ export default function AdminPatientsPage() {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:5000/api/patients/admin/${selectedPatient._id}`, {
+      const response = await fetch(`http://localhost:5001/api/patients/admin/${selectedPatient._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

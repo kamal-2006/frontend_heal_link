@@ -3,10 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { reportsApi } from "../../../utils/api";
+import { API_CONFIG } from "@/config/api";
 
 export default function ReportsPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
+  // Derive file base from API base (strip trailing /api/v1)
+  const fileBase = API_CONFIG.BASE_URL.replace(/\/api\/v1$/, "");
   
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -402,7 +405,7 @@ export default function ReportsPage() {
                   <div className="flex items-center space-x-2">
                     {report.fileUrl && (
                       <a
-                        href={`http://localhost:5000${report.fileUrl}`}
+                        href={`${fileBase}${report.fileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50"

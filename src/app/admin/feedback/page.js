@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getDoctorName } from '../../../utils/doctorUtils';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
 
 export default function FeedbackManagement() {
   const [activeTab, setActiveTab] = useState('all');

@@ -4,14 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import NotificationBell from '@/components/NotificationBell';
+import { getAuthUrl } from '@/config/api';
 
 export default function AdminLayout({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
   const profileRef = useRef(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch admin user info for NotificationBell
   useEffect(() => {
@@ -20,23 +27,29 @@ export default function AdminLayout({ children }) {
         const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
         
+        console.log('[Admin Layout] Fetching user info...');
+        console.log('[Admin Layout] Token exists:', !!token);
+        console.log('[Admin Layout] Stored user exists:', !!storedUser);
+        
         // If we have a stored user, use it immediately
         if (storedUser) {
           try {
             const user = JSON.parse(storedUser);
+            console.log('[Admin Layout] Loaded user from storage:', user);
             setAdminUser(user);
           } catch (e) {
-            console.error('Error parsing stored user:', e);
+            console.error('[Admin Layout] Error parsing stored user:', e);
           }
         }
         
         // If no token, return
         if (!token) {
+          console.warn('[Admin Layout] No token found - notification bell will not render');
           return;
         }
         
         // Try to fetch fresh user data
-        const response = await fetch('http://localhost:5000/api/v1/auth/me', {
+        const response = await fetch(getAuthUrl(), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -45,12 +58,15 @@ export default function AdminLayout({ children }) {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
+            console.log('[Admin Layout] Fresh user data fetched:', data.data);
             setAdminUser(data.data);
             localStorage.setItem('user', JSON.stringify(data.data));
           }
+        } else {
+          console.warn('[Admin Layout] Failed to fetch user:', response.status);
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('[Admin Layout] Error fetching user:', error);
       }
     };
     fetchUserInfo();
@@ -159,15 +175,22 @@ export default function AdminLayout({ children }) {
               </button>
 
               {/* Logo */}
-              <Link href="/" className="flex-shrink-0 flex items-center">
-                <h1 className="text-2xl font-bold text-blue-600">Heal Link</h1>
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold sm:text-2xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  Heal Link
+                </span>
               </Link>
             </div>
             
             {/* Right Side: Notification Bell + User Profile */}
             <div className="flex items-center gap-3">
               {/* Real-Time Notification Bell */}
-              {adminUser && (
+              {mounted && adminUser && (
                 <NotificationBell 
                   userId={adminUser._id} 
                   role="admin" 

@@ -39,7 +39,7 @@ export default function PatientManagement() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const response = await fetch('http://localhost:5000/api/v1/patients/admin/patients', {
+      const response = await fetch('http://localhost:5001/api/v1/patients/admin/patients', {
         signal: controller.signal
       });
       

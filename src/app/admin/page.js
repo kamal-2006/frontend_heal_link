@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getDoctorName } from "../../utils/doctorUtils";
+import { API_CONFIG } from "@/config/api";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000/api/v1";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({

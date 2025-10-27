@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getDoctorInitials } from "@/utils/doctorUtils";
+import { API_CONFIG } from "@/config/api";
 
 /**
  * DoctorAvatar component - displays doctor's profile photo or initials fallback
@@ -19,6 +20,11 @@ export default function DoctorAvatar({
   alt = null
 }) {
   const [imageError, setImageError] = useState(false);
+  const fileBase = API_CONFIG.BASE_URL.replace(/\/api\/v1$/, '');
+  const buildFileUrl = (path) => {
+    if (!path) return '';
+    return path.startsWith('/') ? `${fileBase}${path}` : `${fileBase}/${path}`;
+  };
   
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
@@ -40,7 +46,7 @@ export default function DoctorAvatar({
     <div className={`${sizeClasses[size]} rounded-full overflow-hidden ${borderClass} ${className}`}>
       {shouldShowImage ? (
         <img
-          src={`http://localhost:5000/${doctor.user.profilePicture}`}
+          src={buildFileUrl(doctor.user.profilePicture)}
           alt={altText}
           className="w-full h-full object-cover"
           onError={handleImageError}

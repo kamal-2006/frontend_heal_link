@@ -288,21 +288,20 @@ export default function DoctorPatients() {
               {/* Patient Basic Info */}
               <div className="flex items-start mb-6">
                 <div className="h-16 w-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">
-                  {patientToView.user.firstName[0]}
-                  {patientToView.user.lastName[0]}
+                  {patientToView.name?.charAt(0) || "P"}
                 </div>
                 <div className="ml-6">
                   <h2 className="text-xl font-bold text-gray-900">
-                    {patientToView.user.firstName} {patientToView.user.lastName}
+                    {patientToView.name || "N/A"}
                   </h2>
                   <p className="text-gray-500">
-                    {patientToView.patientId} •{" "}
+                    {patientToView.patientId || patientToView._id?.slice(-6)} •{" "}
                     {calculateAge(patientToView.dateOfBirth)} years •{" "}
-                    {patientToView.gender}
+                    {patientToView.gender || "N/A"}
                   </p>
                   <div className="mt-2 flex space-x-4">
                     <a
-                      href={`tel:${patientToView.user.phone}`}
+                      href={`tel:${patientToView.phone || ""}`}
                       className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
                     >
                       <svg
@@ -316,7 +315,7 @@ export default function DoctorPatients() {
                       Call
                     </a>
                     <a
-                      href={`mailto:${patientToView.user.email}`}
+                      href={`mailto:${patientToView.email || ""}`}
                       className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
                     >
                       <svg
@@ -343,13 +342,13 @@ export default function DoctorPatients() {
                   <div>
                     <p className="text-xs text-gray-500">Email</p>
                     <p className="text-sm text-gray-900">
-                      {patientToView.user.email}
+                      {patientToView.email || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Phone</p>
                     <p className="text-sm text-gray-900">
-                      {patientToView.user.phone}
+                      {patientToView.phone || "N/A"}
                     </p>
                   </div>
                   <div className="md:col-span-2">

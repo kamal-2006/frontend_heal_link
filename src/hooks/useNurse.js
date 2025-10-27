@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getAuthUrl } from '@/config/api';
 
 const useNurse = () => {
   const [nurse, setNurse] = useState(null);
@@ -17,7 +18,7 @@ const useNurse = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/v1/auth/me', {
+        const response = await fetch(getAuthUrl(), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

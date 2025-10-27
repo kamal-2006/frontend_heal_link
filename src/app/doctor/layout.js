@@ -7,6 +7,7 @@ import useUser from "@/hooks/useUser";
 import useDoctor from "@/hooks/useDoctor";
 import { toTitleCase } from "@/utils/text";
 import NotificationBell from "@/components/NotificationBell";
+import { getFileUrl } from "@/utils/fileUtils";
 
 export default function DoctorDashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Start with false to avoid hydration mismatch
@@ -136,7 +137,7 @@ export default function DoctorDashboardLayout({ children }) {
                       <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-md overflow-hidden">
                         {user?.profilePicture ? (
                           <img
-                            src={`http://localhost:5000/${user.profilePicture}`}
+                            src={getFileUrl(user.profilePicture)}
                             alt="Profile"
                             className="w-full h-full object-cover"
                           />
@@ -159,7 +160,7 @@ export default function DoctorDashboardLayout({ children }) {
                           <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-md flex-shrink-0 overflow-hidden">
                             {user?.profilePicture ? (
                               <img
-                                src={`http://localhost:5000/${user.profilePicture}`}
+                                src={getFileUrl(user.profilePicture)}
                                 alt="Profile"
                                 className="w-full h-full object-cover"
                               />

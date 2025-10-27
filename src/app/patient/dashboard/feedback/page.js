@@ -81,8 +81,18 @@ export default function PatientFeedbackPage() {
         setLoadingHistory(true);
         
         // Fetch appointments that need feedback
-        const appointmentsData = await feedbackApi.getAppointmentsNeedingFeedback();
-        setAppointments(appointmentsData.data || []);
+        const appointmentsRes = await feedbackApi.getAppointmentsNeedingFeedback();
+        // Normalize to expected shape for this UI
+        const normalized = (appointmentsRes.data || []).map((apt) => ({
+          _id: apt._id,
+          id: apt._id, // legacy usage in this page
+          date: apt.date,
+          time: apt.date ? new Date(apt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          doctor: apt.doctor, // object with _id, firstName, lastName, specialization
+          doctorName: apt.doctor ? `Dr. ${apt.doctor.firstName} ${apt.doctor.lastName}` : 'Doctor',
+          specialty: apt.doctor?.specialization || 'General Medicine',
+        }));
+        setAppointments(normalized);
         setLoading(false);
         
         // Fetch feedback history
@@ -120,11 +130,11 @@ export default function PatientFeedbackPage() {
     try {
       // Prepare feedback data
       const feedbackPayload = {
-        doctor: currentAppointment.doctor,
+        doctor: currentAppointment?.doctor?._id || currentAppointment?.doctor,
         rating: rating,
         waitTime: waitTime,
         comment: comments,
-        appointment: currentAppointment.id
+        appointment: currentAppointment?._id || currentAppointment?.id,
       };
 
       // Submit feedback to backend
@@ -139,9 +149,7 @@ export default function PatientFeedbackPage() {
       });
 
       // Remove the submitted appointment from the list and refresh feedback history
-      setAppointments(
-        appointments.filter((apt) => apt.id !== currentAppointment.id)
-      );
+      setAppointments((prev) => prev.filter((apt) => (apt._id || apt.id) !== (currentAppointment?._id || currentAppointment?.id)));
       
       // Refresh feedback history
       const updatedFeedbackData = await feedbackApi.getMyFeedback();

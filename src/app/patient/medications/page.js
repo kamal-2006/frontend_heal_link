@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import usePatient from "@/hooks/usePatient";
-// import { get } from "@/utils/api";
+import apiRequest, { medicationApi } from "@/utils/api";
 
 export default function MedicationsPage() {
   const router = useRouter();
@@ -39,28 +39,13 @@ export default function MedicationsPage() {
       }
 
       try {
-        // Fetch real medications from API
-        const response = await fetch("http://localhost:5000/api/v1/medications/my", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setMedications(result.data || []);
-        } else {
-          console.error("Failed to fetch medications");
-          // Fallback to empty array if API fails
-          setMedications([]);
-        }
-        setIsLoading(false);
+        // Fetch medications via centralized API helper
+        const result = await medicationApi.getMyMedications();
+        setMedications(result?.data || []);
       } catch (error) {
         console.error("Error fetching medications:", error);
-        // Fallback to empty array if there's an error
         setMedications([]);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -198,17 +183,12 @@ export default function MedicationsPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/v1/medications/my", {
+      const result = await apiRequest("/medications/my", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(medicationForm),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      if (result?.success) {
         // Add the new medication to the list
         setMedications(prev => [result.data, ...prev]);
         
@@ -241,8 +221,7 @@ export default function MedicationsPage() {
           setShowSuccessPopup(false);
         }, 4000);
       } else {
-        const error = await response.json();
-        alert("Failed to add medication: " + error.error);
+        alert("Failed to add medication: " + (result?.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Error adding medication:", error);

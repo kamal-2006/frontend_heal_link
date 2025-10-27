@@ -42,7 +42,7 @@ export default function PatientManagement() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch('http://localhost:5000/api/v1/patients/admin/patients', {
+      const response = await fetch('http://localhost:5001/api/v1/patients/admin/patients', {
         signal: controller.signal
       });
       
@@ -107,7 +107,7 @@ export default function PatientManagement() {
     try {
       setModalLoading(true);
       
-      const response = await fetch(`http://localhost:5000/api/v1/patients/admin/patients/${patientId}`);
+      const response = await fetch(`http://localhost:5001/api/v1/patients/admin/patients/${patientId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch patient details: ${response.status} ${response.statusText}`);

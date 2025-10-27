@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { API_CONFIG } from "@/config/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export default function NursePatients() {
   const router = useRouter();
@@ -215,120 +216,96 @@ export default function NursePatients() {
         </div>
       </div>
 
-      {/* Patients Table */}
-      <div className="bg-white rounded-lg shadow border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
+      {/* Patients Cards */}
+      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900">
             All Patients ({patients.length})
           </h2>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient Info
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact Information
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Demographics
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Medical Info
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registration Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {patients.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center">
-                      <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
-                      <p className="text-gray-500">Try adjusting your search criteria.</p>
+        {patients.length === 0 ? (
+          <div className="py-12 text-center">
+            <div className="flex flex-col items-center">
+              <svg className="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
+              <p className="text-gray-500">Try adjusting your search criteria.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {patients.map((patient) => (
+              <div key={patient._id} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-shadow duration-200">
+                {/* Patient Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <span className="text-white font-semibold text-lg">
+                        {patient.user?.firstName?.[0] || 'P'}
+                        {patient.user?.lastName?.[0] || ''}
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                patients.map((patient) => (
-                  <tr key={patient._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                          <span className="text-gray-600 font-medium text-sm">
-                            {patient.user?.firstName?.[0] || 'P'}
-                            {patient.user?.lastName?.[0] || ''}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {patient.user?.firstName || ''} {patient.user?.lastName || ''}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {patient.patientId || 'Not assigned'}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {patient.user?.email || 'No email'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {patient.user?.phone || 'No phone'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        Age: {calculateAge(patient.dateOfBirth)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {patient.gender || 'Not specified'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        Blood Type: {patient.bloodType || 'Unknown'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {patient.height?.value ? `Height: ${patient.height.value}${patient.height.unit || 'cm'}` : 'Height: N/A'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {patient.weight?.value ? `Weight: ${patient.weight.value}${patient.weight.unit || 'kg'}` : 'Weight: N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(patient.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button 
-                        onClick={() => handleViewPatient(patient)}
-                        className="text-blue-600 hover:text-blue-900 p-2 rounded-full hover:bg-blue-50 transition-colors"
-                        title="View Patient Details"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {patient.user?.firstName || ''} {patient.user?.lastName || ''}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        ID: {patient.patientId || 'Not assigned'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Patient Details */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-sm">
+                    <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-gray-700 truncate">{patient.user?.email || 'No email'}</span>
+                  </div>
+                  
+                  {patient.user?.phone && (
+                    <div className="flex items-center text-sm">
+                      <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span className="text-gray-700">{patient.user?.phone}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+                    <span className="text-gray-600">Age: {calculateAge(patient.dateOfBirth)}</span>
+                    <span className="text-gray-600">{patient.gender || 'N/A'}</span>
+                  </div>
+                  
+                  {patient.bloodType && (
+                    <div className="flex items-center text-sm">
+                      <svg className="w-4 h-4 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                      </svg>
+                      <span className="text-gray-700">Blood Type: {patient.bloodType}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                <button 
+                  onClick={() => handleViewPatient(patient)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span>View Details</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Patient Details Modal */}

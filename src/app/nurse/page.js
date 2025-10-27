@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL || // fallback if still present
-  "http://localhost:5000/api/v1";
+import { API_CONFIG } from "@/config/api";
 
 export default function NurseDashboard() {
   const router = useRouter();
@@ -28,7 +24,7 @@ export default function NurseDashboard() {
         }
 
         // Fetch nurse info
-        const nurseResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+        const nurseResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -44,7 +40,7 @@ export default function NurseDashboard() {
 
         // Fetch dashboard data
         const dashboardResponse = await fetch(
-          `${API_BASE_URL}/nurse/dashboard-data`,
+          `${API_CONFIG.BASE_URL}/nurse/dashboard-data`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -142,6 +138,27 @@ export default function NurseDashboard() {
       ),
       action: () => router.push("/nurse/patients"),
       color: "bg-purple-500 hover:bg-purple-600",
+    },
+    {
+      name: "Medications",
+      description: "Manage medications",
+      icon: (
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+          />
+        </svg>
+      ),
+      action: () => router.push("/nurse/medications"),
+      color: "bg-orange-500 hover:bg-orange-600",
     },
   ];
 
@@ -345,9 +362,9 @@ export default function NurseDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         {/* Upcoming Appointments */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -460,32 +477,27 @@ export default function NurseDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-700 font-medium">
-                            View
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-700">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+                        <button className="text-gray-600 hover:text-blue-600 transition-colors">
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -496,8 +508,8 @@ export default function NurseDashboard() {
         </div>
 
         {/* Quick Actions Panel */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200 bg-white/50">
             <h2 className="text-lg font-semibold text-gray-900">
               Quick Actions
             </h2>
@@ -505,24 +517,30 @@ export default function NurseDashboard() {
               Frequently used nursing tasks
             </p>
           </div>
-          <div className="p-6 space-y-4">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className={`w-full ${action.color} text-white rounded-lg p-4 transition-colors duration-200 transform hover:scale-105`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">{action.icon}</div>
-                  <div className="text-left">
-                    <div className="font-semibold">{action.name}</div>
-                    <div className="text-sm opacity-90">
-                      {action.description}
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="bg-white hover:bg-gray-50 rounded-lg p-5 transition-all duration-200 transform hover:scale-105 hover:shadow-md border border-gray-200"
+                >
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className={`p-4 rounded-full ${action.color}`}>
+                      <div className="text-white">
+                        {action.icon}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{action.name}</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {action.description}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

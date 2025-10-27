@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_CONFIG } from '@/config/api';
 
 export default function NotificationBell({ userId, role }) {
   const [notifications, setNotifications] = useState([]);
@@ -19,7 +18,14 @@ export default function NotificationBell({ userId, role }) {
     
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/v1/notifications?userId=${userId}&role=${role}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const qs = new URLSearchParams({ userId, role }).toString();
+      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications?${qs}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -36,10 +42,12 @@ export default function NotificationBell({ userId, role }) {
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/notifications/${notificationId}/read`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       
@@ -61,10 +69,12 @@ export default function NotificationBell({ userId, role }) {
     if (!userId) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/notifications/mark-all-read`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications/mark-all-read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ userId }),
       });
@@ -83,8 +93,12 @@ export default function NotificationBell({ userId, role }) {
   // Delete notification
   const deleteNotification = async (notificationId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/notifications/${notificationId}`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications/${notificationId}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       
       const data = await response.json();
@@ -106,7 +120,7 @@ export default function NotificationBell({ userId, role }) {
     if (!userId) return;
 
     // Connect to Socket.IO server
-    socketRef.current = io(API_BASE_URL, {
+    socketRef.current = io(API_CONFIG.SOCKET_URL, {
       transports: ['websocket', 'polling'],
     });
 

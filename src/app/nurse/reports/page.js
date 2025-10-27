@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { API_CONFIG } from "@/config/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export default function NurseReports() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function NurseReports() {
     notes: '',
     fileUrl: ''
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -108,6 +111,7 @@ export default function NurseReports() {
     e.preventDefault();
     
     try {
+      setUploading(true);
       const response = await fetch(`${API_BASE_URL}/nurse/reports`, {
         method: "POST",
         headers: {
@@ -130,6 +134,7 @@ export default function NurseReports() {
           notes: '',
           fileUrl: ''
         });
+        setSelectedFile(null);
         alert('Report added successfully!');
       } else {
         const errorData = await response.json();
@@ -138,6 +143,22 @@ export default function NurseReports() {
     } catch (error) {
       console.error("Error adding report:", error);
       alert('Error adding report. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size should not exceed 10MB');
+        return;
+      }
+      setSelectedFile(file);
+      // For now, just store filename. In production, you'd upload to cloud storage
+      setFormData({ ...formData, fileUrl: file.name });
     }
   };
 
@@ -178,6 +199,17 @@ export default function NurseReports() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getFileUrl = (fileUrl) => {
+    if (!fileUrl) return null;
+    // If it's already a full URL, return as is
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      return fileUrl;
+    }
+    // If it's a relative path, construct the full URL
+    const baseUrl = API_BASE_URL.replace('/api/v1', '');
+    return `${baseUrl}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
   };
 
   const handleViewReport = (report) => {
@@ -485,7 +517,54 @@ export default function NurseReports() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Upload Report File</label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors">
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="file-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>Upload a file</span>
+                          <input
+                            id="file-upload"
+                            name="file-upload"
+                            type="file"
+                            className="sr-only"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            onChange={handleFileSelect}
+                          />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        PDF, DOC, DOCX, JPG, PNG up to 10MB
+                      </p>
+                      {selectedFile && (
+                        <p className="text-sm text-green-600 font-medium mt-2">
+                          Selected: {selectedFile.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Or Enter File URL</label>
                   <input
                     type="url"
                     value={formData.fileUrl}
@@ -498,16 +577,28 @@ export default function NurseReports() {
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setSelectedFile(null);
+                    }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                    disabled={uploading}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center space-x-2"
+                    disabled={uploading}
                   >
-                    Add Report
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <span>Add Report</span>
+                    )}
                   </button>
                 </div>
               </form>
@@ -644,7 +735,7 @@ export default function NurseReports() {
                       </div>
                       <div className="flex space-x-2">
                         <a
-                          href={selectedReport.fileUrl}
+                          href={getFileUrl(selectedReport.fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -656,7 +747,7 @@ export default function NurseReports() {
                           View File
                         </a>
                         <a
-                          href={selectedReport.fileUrl}
+                          href={getFileUrl(selectedReport.fileUrl)}
                           download
                           className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >

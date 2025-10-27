@@ -371,7 +371,7 @@ export default function ViewProfile() {
                   <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
                 ) : patient?.user?.profilePicture ? (
                   <img 
-                    src={`http://localhost:5000/${patient.user.profilePicture}`} 
+                    src={`${(process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api/v1').replace(/\/api\/v1$/, '')}${patient.user.profilePicture.startsWith('/') ? '' : '/'}${patient.user.profilePicture}`} 
                     alt="Profile" 
                     className="w-full h-full object-cover" 
                     onError={(e) => {
