@@ -70,6 +70,7 @@ export default function NurseLayout({ children }) {
   const nurseInfo = {
     name: `${nurse.firstName} ${nurse.lastName}`,
     id: nurse._id,
+    nurseId: `NRS-${nurse._id.slice(-6).toUpperCase()}`, // Create a formatted nurse ID
     email: nurse.email,
     department: "General Ward", // This could be added to user model later
     shift: "Morning Shift (6AM - 2PM)", // This could be added to user model later
@@ -184,10 +185,27 @@ export default function NurseLayout({ children }) {
                 </button>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                    <div className="p-4 border-b border-gray-200">
-                      <p className="text-sm font-semibold text-gray-900">{nurseInfo.name}</p>
-                      <p className="text-xs text-gray-500">{nurseInfo.id}</p>
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-gray-900">{nurseInfo.name}</p>
+                          <p className="text-xs text-blue-600 font-semibold">{nurseInfo.nurseId}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-blue-200">
+                        <p className="text-xs text-gray-600 flex items-center">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {nurseInfo.email}
+                        </p>
+                      </div>
                     </div>
                     <div className="py-2">
                       <a href="/nurse/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">

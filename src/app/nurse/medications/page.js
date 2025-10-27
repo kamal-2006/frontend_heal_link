@@ -43,7 +43,7 @@ export default function NurseMedications() {
       if (filters.patient) queryParams.append('patient', filters.patient);
       if (filters.status) queryParams.append('status', filters.status);
 
-      const response = await fetch(`${API_BASE_URL}/nurse/medications?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/medications?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export default function NurseMedications() {
     e.preventDefault();
     
     try {
-      const response = await fetch(`${API_BASE_URL}/nurse/medications`, {
+      const response = await fetch(`${API_BASE_URL}/medications`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
