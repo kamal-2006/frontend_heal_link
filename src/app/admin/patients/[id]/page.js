@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+
 export default function PatientDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -101,7 +103,7 @@ export default function PatientDetailPage() {
     try {
       setIsSaving(true);
       
-      const response = await fetch(`http://localhost:5000/api/v1/patients/admin/patients/${params.id}`, {
+      const response = await fetch(`${API_BASE_URL}/patients/admin/patients/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +151,7 @@ export default function PatientDetailPage() {
     try {
       setLoading(true);
       console.log('Fetching patient details for ID:', params.id);
-      const response = await fetch(`http://localhost:5000/api/v1/patients/admin/patients/${params.id}`);
+      const response = await fetch(`${API_BASE_URL}/patients/admin/patients/${params.id}`);
       
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);

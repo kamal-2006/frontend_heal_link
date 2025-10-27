@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 
-export default function PatientManagement() {
+import { API_CONFIG } from "@/config/api";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,7 +49,7 @@ export default function PatientManagement() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch('http://localhost:5001/api/v1/patients/admin/patients', {
+      const response = await fetch(`${API_BASE_URL}/patients/admin/patients`, {
         signal: controller.signal
       });
       
@@ -112,7 +114,7 @@ export default function PatientManagement() {
     try {
       setModalLoading(true);
       
-      const response = await fetch(`http://localhost:5001/api/v1/patients/admin/patients/${patientId}`);
+      const response = await fetch(`${API_BASE_URL}/patients/admin/patients/${patientId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch patient details: ${response.status} ${response.statusText}`);
@@ -232,7 +234,7 @@ export default function PatientManagement() {
         } : null
       };
 
-      const response = await fetch(`http://localhost:5001/api/v1/patients/admin/patients/${patientDetails._id}`, {
+      const response = await fetch(`${API_BASE_URL}/patients/admin/patients/${patientDetails._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

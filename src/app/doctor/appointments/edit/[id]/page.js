@@ -22,7 +22,7 @@ export default function EditAppointment() {
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
-        const data = await get(`/api/v1/appointments/${id}`);
+        const data = await get(`/appointments/${id}`);
         if (data.success) {
           const appointment = data.data;
           setFormData({
@@ -42,7 +42,7 @@ export default function EditAppointment() {
 
     const fetchPatients = async () => {
       try {
-        const data = await get("/api/v1/patients");
+        const data = await get("/patients");
         if (data.success) {
           setPatients(data.data || []);
         } else {

@@ -435,7 +435,7 @@ export const reportsApi = {
     const token = localStorage.getItem("token");
     return fetch(
       `${
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001/api/v1"
       }/records/patient/upload`,
       {
         method: "POST",
@@ -481,7 +481,7 @@ export const reportsApi = {
     const token = localStorage.getItem("token");
     return fetch(
       `${
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001/api/v1"
       }/records/${id}/download`,
       {
         headers: { Authorization: `Bearer ${token}` },

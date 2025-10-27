@@ -1,8 +1,10 @@
 import useSWR from 'swr';
 
+import { API_CONFIG } from '@/config/api';
+
 const fetcher = async (url) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:5000/api/v1${url}`, {
+    const res = await fetch(`${API_CONFIG.BASE_URL}${url}`, {
         headers: { Authorization: `Bearer ${token}` }
     });
 

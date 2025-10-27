@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+import { API_CONFIG } from "@/config/api";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export default function AdminNursesPage() {
   const [nurses, setNurses] = useState([]);

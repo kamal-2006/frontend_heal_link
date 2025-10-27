@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { getDoctorName } from '../../../utils/doctorUtils';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+import { API_CONFIG } from "@/config/api";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Helper functions - moved outside component scope for accessibility
 const getStatusBadgeColor = (status) => {
@@ -81,7 +83,7 @@ export default function AppointmentManagement() {
   const testBackend = async () => {
     try {
       console.log('🧪 Testing backend connectivity...');
-      const response = await fetch('http://localhost:5001/api/v1/appointments/admin', {
+      const response = await fetch(`${API_BASE_URL}/appointments/admin`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -995,8 +997,6 @@ function RescheduleModal({ appointment, onClose, onConfirm }) {
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
   
   const timeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',

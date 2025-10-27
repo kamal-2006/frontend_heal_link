@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { appointmentApi, doctorApi, get, post } from "@/utils/api";
+import { appointmentApi, doctorApi, get, post, API_CONFIG } from "@/utils/api";
 import { useRouter } from "next/navigation";
 
 export default function BulkSwapPage() {
@@ -153,8 +153,7 @@ export default function BulkSwapPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
-        const base =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+        const base = API_CONFIG.BASE_URL;
         const endpoints = [
           `${base}/doctors/available?${queryString}`,
           `${base}/doctors/availability?${queryString}`,

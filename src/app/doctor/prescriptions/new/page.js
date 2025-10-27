@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { patientApi, medicationApi } from '@/utils/api';
+import { patientApi, medicationApi, post } from '@/utils/api';
 
 export default function NewPrescription() {
   const router = useRouter();
@@ -50,18 +50,9 @@ export default function NewPrescription() {
 
     try {
       // Direct API call to create prescription
-      const response = await fetch('/api/v1/prescriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const result = await post('/prescriptions', formData);
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         alert('Prescription created successfully!');
         router.push('/doctor/prescriptions');
       } else {

@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { getDoctorName } from '../../../utils/doctorUtils';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+import { API_CONFIG } from "@/config/api";
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Add custom styles for animations
 const styles = `
